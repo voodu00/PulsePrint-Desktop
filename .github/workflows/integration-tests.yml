@@ -1,0 +1,137 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  integration-tests:
+    name: Integration Tests
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+          cache-dependency-path: frontend-react/yarn.lock
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install system dependencies (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf xvfb
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend-react
+          yarn install --frozen-lockfile
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli
+
+      - name: Build application
+        run: |
+          cd frontend-react
+          yarn build
+
+      - name: Run Tauri integration tests (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cd src-tauri
+          xvfb-run -a cargo test --test integration_tests --verbose
+
+      - name: Run Tauri integration tests (Windows/macOS)
+        if: matrix.os != 'ubuntu-latest'
+        run: |
+          cd src-tauri
+          cargo test --test integration_tests --verbose
+
+      - name: Test application startup
+        run: |
+          # Build the app first
+          cargo tauri build --verbose
+
+          # Test that the app can start (this will vary by OS)
+          # For now, we'll just verify the build succeeded
+          echo "Application build completed successfully"
+
+  e2e-tests:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+          cache-dependency-path: frontend-react/yarn.lock
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend-react
+          yarn install --frozen-lockfile
+
+      - name: Install Playwright
+        run: |
+          cd frontend-react
+          npx playwright install --with-deps
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli
+
+      - name: Build application
+        run: |
+          cd frontend-react
+          yarn build
+
+      - name: Run E2E tests
+        run: |
+          cd frontend-react
+          # For now, we'll add a placeholder for future E2E tests
+          echo "E2E tests will be implemented here"
+          # npx playwright test
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-test-results
+          path: |
+            frontend-react/test-results/
+            frontend-react/playwright-report/

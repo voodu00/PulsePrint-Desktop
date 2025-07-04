@@ -1,0 +1,81 @@
+version: 2
+updates:
+  # Frontend React dependencies
+  - package-ecosystem: 'npm'
+    directory: '/frontend-react'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+    open-pull-requests-limit: 10
+    reviewers:
+      - 'Z3r0L0g' # Replace with your GitHub username
+    assignees:
+      - 'Z3r0L0g' # Replace with your GitHub username
+    commit-message:
+      prefix: 'feat'
+      prefix-development: 'chore'
+      include: 'scope'
+    labels:
+      - 'dependencies'
+      - 'frontend'
+    allow:
+      - dependency-type: 'direct'
+      - dependency-type: 'indirect'
+    ignore:
+      # Ignore major version updates for critical dependencies
+      - dependency-name: 'react'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'react-dom'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major']
+
+  # Rust/Tauri dependencies
+  - package-ecosystem: 'cargo'
+    directory: '/src-tauri'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+    open-pull-requests-limit: 10
+    reviewers:
+      - 'Z3r0L0g' # Replace with your GitHub username
+    assignees:
+      - 'Z3r0L0g' # Replace with your GitHub username
+    commit-message:
+      prefix: 'feat'
+      prefix-development: 'chore'
+      include: 'scope'
+    labels:
+      - 'dependencies'
+      - 'rust'
+      - 'tauri'
+    allow:
+      - dependency-type: 'direct'
+      - dependency-type: 'indirect'
+    ignore:
+      # Ignore major version updates for critical dependencies
+      - dependency-name: 'tauri'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'tauri-build'
+        update-types: ['version-update:semver-major']
+
+  # GitHub Actions
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+    open-pull-requests-limit: 5
+    reviewers:
+      - 'Z3r0L0g' # Replace with your GitHub username
+    assignees:
+      - 'Z3r0L0g' # Replace with your GitHub username
+    commit-message:
+      prefix: 'ci'
+      include: 'scope'
+    labels:
+      - 'dependencies'
+      - 'github-actions'
