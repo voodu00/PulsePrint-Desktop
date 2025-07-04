@@ -30,10 +30,10 @@ jobs:
           cd frontend-react
           yarn install --frozen-lockfile
 
-          - name: Run ESLint
-      run: |
-        cd frontend-react
-        yarn eslint src --ext .ts,.tsx --max-warnings 50
+      - name: Run ESLint
+        run: |
+          cd frontend-react
+          yarn eslint src --ext .ts,.tsx --max-warnings 50
 
       - name: Run Prettier check
         run: |
@@ -45,11 +45,11 @@ jobs:
           cd frontend-react
           yarn tsc --noEmit
 
-          - name: Run tests
-      run: |
-        cd frontend-react
-        echo "Frontend tests temporarily disabled - need Tauri mocking setup"
-        # yarn test --coverage --watchAll=false
+      - name: Run tests
+        run: |
+          cd frontend-react
+          echo "Frontend tests temporarily disabled - need Tauri mocking setup"
+          # yarn test --coverage --watchAll=false
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
@@ -86,10 +86,10 @@ jobs:
           cd src-tauri
           cargo fmt --all -- --check
 
-          - name: Run Clippy
-      run: |
-        cd src-tauri
-        cargo clippy --all-targets --all-features
+      - name: Run Clippy
+        run: |
+          cd src-tauri
+          cargo clippy --all-targets --all-features
 
       - name: Run Rust tests
         run: |
