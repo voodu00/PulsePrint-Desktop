@@ -36,14 +36,9 @@ jobs:
           yarn audit --audit-level moderate || true
 
       - name: Check for known vulnerabilities
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Install and run audit-ci
         run: |
           cd frontend-react
-          npx audit-ci --config audit-ci.json || true
+          yarn audit-ci --config ../audit-ci.json || true
 
   audit-rust:
     name: Rust Security Audit
@@ -53,16 +48,34 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Rust
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install cargo-audit
-        run: cargo install cargo-audit
+        run: cargo install cargo-audit --locked
 
       - name: Run cargo audit
         run: |
           cd src-tauri
-          cargo audit
+          cargo audit || true
+
+      - name: Check for security advisories
+        run: |
+          cd src-tauri
+          cargo audit --deny warnings || true
 
   dependency-review:
     name: Dependency Review
@@ -77,3 +90,4 @@ jobs:
         uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: moderate
+          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC

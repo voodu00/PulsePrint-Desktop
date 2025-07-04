@@ -38,18 +38,18 @@ jobs:
       - name: Run Prettier check
         run: |
           cd frontend-react
-          yarn prettier --check src
+          yarn prettier --check "src/**/*.{ts,tsx,js,jsx,json,css,md}"
 
-      - name: Run TypeScript compiler
+      - name: TypeScript compilation check
         run: |
           cd frontend-react
           yarn tsc --noEmit
 
-      - name: Run tests
-        run: |
-          cd frontend-react
-          echo "Frontend tests temporarily disabled - need Tauri mocking setup"
-          # yarn test --coverage --watchAll=false
+      # Temporarily disabled until proper Tauri mocking is implemented
+      # - name: Run tests
+      #   run: |
+      #     cd frontend-react
+      #     yarn test --watchAll=false --coverage
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
@@ -66,49 +66,59 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Rust
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
 
       - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
+        uses: actions/cache@v4
         with:
-          workspaces: src-tauri
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
-
-      - name: Check Rust formatting
-        run: |
-          cd src-tauri
-          cargo fmt --all -- --check
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run Clippy
         run: |
           cd src-tauri
           cargo clippy --all-targets --all-features
 
-      - name: Run Rust tests
+      - name: Check formatting
         run: |
           cd src-tauri
-          cargo test --verbose
+          cargo fmt --all -- --check
 
-      - name: Check Rust build
+      - name: Run tests
         run: |
           cd src-tauri
-          cargo check --verbose
+          cargo test
 
-  build-test:
-    name: Build Test
-    runs-on: ${{ matrix.os }}
-    needs: [frontend-checks, rust-checks]
+      - name: Build verification
+        run: |
+          cd src-tauri
+          cargo build --release
 
+  cross-platform-build:
+    name: Cross-Platform Build Test
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout code
@@ -121,32 +131,29 @@ jobs:
           cache: 'yarn'
           cache-dependency-path: frontend-react/yarn.lock
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri
-
-      - name: Install system dependencies (Ubuntu)
+      - name: Install Linux dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Install frontend dependencies
         run: |
           cd frontend-react
           yarn install --frozen-lockfile
 
-      - name: Build frontend
+      - name: Build application
         run: |
           cd frontend-react
-          yarn build
-
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli
-
-      - name: Build Tauri app
-        run: cargo tauri build --verbose
+          yarn tauri build --bundles none
