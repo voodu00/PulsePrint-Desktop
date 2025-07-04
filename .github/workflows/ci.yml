@@ -153,7 +153,8 @@ jobs:
           cd frontend-react
           yarn install --frozen-lockfile
 
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --locked
+
       - name: Build application
-        run: |
-          cd frontend-react
-          yarn tauri build --bundles none
+        run: cargo tauri build --bundles none

@@ -93,10 +93,11 @@ jobs:
           cd frontend-react
           yarn playwright install --with-deps
 
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --locked
+
       - name: Build Tauri app for testing
-        run: |
-          cd frontend-react
-          yarn tauri build --bundles none
+        run: cargo tauri build --bundles none
 
       - name: Run E2E tests
         run: |
