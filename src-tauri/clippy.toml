@@ -4,9 +4,6 @@
 # Cognitive complexity threshold
 cognitive-complexity-threshold = 30
 
-# Cyclomatic complexity threshold
-cyclomatic-complexity-threshold = 15
-
 # Maximum number of lines a function can have
 too-many-lines-threshold = 100
 
@@ -18,9 +15,6 @@ single-char-binding-names-threshold = 4
 
 # Maximum size of types to avoid performance issues
 type-complexity-threshold = 250
-
-# Maximum number of bounds a generic type can have
-type-repetition-threshold = 3
 
 # Maximum number of variants a enum can have
 enum-variant-name-threshold = 3

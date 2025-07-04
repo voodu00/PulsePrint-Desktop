@@ -10,7 +10,7 @@ import {
 	Square,
 	Wifi,
 	WifiOff,
-	Loader2
+	Loader2,
 } from 'lucide-react'
 import { Printer as PrinterType } from '../types/printer'
 import { formatTime } from '../utils/formatTime'
@@ -27,7 +27,7 @@ const PrinterCard: React.FC<PrinterCardProps> = ({
 	printer,
 	onPause,
 	onResume,
-	onStop
+	onStop,
 }) => {
 	const { settings } = useSettings()
 	const isOnline = printer.status !== 'offline'
@@ -50,12 +50,7 @@ const PrinterCard: React.FC<PrinterCardProps> = ({
 			case 'offline':
 				return <WifiOff {...iconProps} />
 			case 'connecting':
-				return (
-					<Loader2
-						{...iconProps}
-						className="w-3 h-3 mr-1 animate-spin"
-					/>
-				)
+				return <Loader2 {...iconProps} className="w-3 h-3 mr-1 animate-spin" />
 			default:
 				return <Wifi {...iconProps} />
 		}
@@ -86,8 +81,8 @@ const PrinterCard: React.FC<PrinterCardProps> = ({
 									printer.temperatures.nozzle > 150
 										? 'temperature-hot'
 										: printer.temperatures.nozzle > 50
-										? 'temperature-warm'
-										: ''
+											? 'temperature-warm'
+											: ''
 								}`}
 							>
 								{Math.round(printer.temperatures.nozzle)}°C
@@ -102,8 +97,8 @@ const PrinterCard: React.FC<PrinterCardProps> = ({
 									printer.temperatures.bed > 80
 										? 'temperature-hot'
 										: printer.temperatures.bed > 40
-										? 'temperature-warm'
-										: ''
+											? 'temperature-warm'
+											: ''
 								}`}
 							>
 								{Math.round(printer.temperatures.bed)}°C

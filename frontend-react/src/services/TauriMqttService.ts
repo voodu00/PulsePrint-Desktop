@@ -3,7 +3,7 @@ import { listen } from '@tauri-apps/api/event'
 import {
 	Printer,
 	PrinterServiceEvent,
-	AddPrinterParams
+	AddPrinterParams,
 } from '../types/printer'
 
 export interface TauriPrinterConfig {
@@ -31,7 +31,7 @@ export class TauriMqttService {
 
 	private async setupEventListeners() {
 		// Listen for printer updates from Tauri backend
-		await listen<Printer>('printer-update', (event) => {
+		await listen<Printer>('printer-update', event => {
 			const printer = this.convertTauriPrinterToFrontend(event.payload)
 			this.printers.set(printer.id, printer)
 
@@ -40,12 +40,12 @@ export class TauriMqttService {
 
 			this.notifyListeners({
 				type: 'updated',
-				data: Array.from(this.printers.values())
+				data: Array.from(this.printers.values()),
 			})
 		})
 
 		// Listen for printer removal
-		await listen<string>('printer-removed', (event) => {
+		await listen<string>('printer-removed', event => {
 			const printerId = event.payload
 			this.printers.delete(printerId)
 
@@ -54,7 +54,7 @@ export class TauriMqttService {
 
 			this.notifyListeners({
 				type: 'updated',
-				data: Array.from(this.printers.values())
+				data: Array.from(this.printers.values()),
 			})
 		})
 	}
@@ -71,7 +71,7 @@ export class TauriMqttService {
 			temperatures: {
 				nozzle: tauriPrinter.temperatures.nozzle,
 				bed: tauriPrinter.temperatures.bed,
-				chamber: tauriPrinter.temperatures.chamber
+				chamber: tauriPrinter.temperatures.chamber,
 			},
 			print: tauriPrinter.print
 				? {
@@ -80,15 +80,15 @@ export class TauriMqttService {
 						layerCurrent: tauriPrinter.print.layer_current,
 						layerTotal: tauriPrinter.print.layer_total,
 						timeRemaining: tauriPrinter.print.time_remaining,
-						estimatedTotalTime: tauriPrinter.print.estimated_total_time
-				  }
+						estimatedTotalTime: tauriPrinter.print.estimated_total_time,
+					}
 				: null,
 			filament: tauriPrinter.filament
 				? {
 						type: tauriPrinter.filament.type,
 						color: tauriPrinter.filament.color,
-						remaining: tauriPrinter.filament.remaining
-				  }
+						remaining: tauriPrinter.filament.remaining,
+					}
 				: null,
 			error: tauriPrinter.error
 				? {
@@ -97,10 +97,10 @@ export class TauriMqttService {
 						stage: tauriPrinter.error.stage,
 						lifecycle: tauriPrinter.error.lifecycle,
 						gcodeState: tauriPrinter.error.gcode_state,
-						message: tauriPrinter.error.message
-				  }
+						message: tauriPrinter.error.message,
+					}
 				: null,
-			lastUpdate: new Date(tauriPrinter.last_update)
+			lastUpdate: new Date(tauriPrinter.last_update),
 		}
 	}
 
@@ -113,7 +113,7 @@ export class TauriMqttService {
 			model: params.model || 'Unknown Model',
 			ip: params.ip,
 			access_code: params.accessCode,
-			serial: params.serial
+			serial: params.serial,
 		}
 	}
 
@@ -138,7 +138,7 @@ export class TauriMqttService {
 						print: null,
 						filament: null,
 						error: null,
-						lastUpdate: new Date()
+						lastUpdate: new Date(),
 					}
 					this.printers.set(config.id, printer)
 				})
@@ -151,13 +151,13 @@ export class TauriMqttService {
 	private savePrintersToStorage(): void {
 		try {
 			const printerConfigs = Array.from(this.printers.values()).map(
-				(printer) => ({
+				printer => ({
 					id: printer.id,
 					name: printer.name,
 					model: printer.model,
 					ip: printer.ip,
 					access_code: printer.accessCode,
-					serial: printer.serial
+					serial: printer.serial,
 				})
 			)
 			localStorage.setItem(
@@ -172,7 +172,7 @@ export class TauriMqttService {
 	async addPrinter(params: AddPrinterParams): Promise<void> {
 		// Check if printer with same serial already exists
 		const existingPrinter = Array.from(this.printers.values()).find(
-			(p) => p.serial === params.serial
+			p => p.serial === params.serial
 		)
 
 		if (existingPrinter) {
@@ -195,7 +195,7 @@ export class TauriMqttService {
 
 	async getAllPrinters(): Promise<Printer[]> {
 		const tauriPrinters = await invoke<any[]>('get_all_printers')
-		return tauriPrinters.map((printer) =>
+		return tauriPrinters.map(printer =>
 			this.convertTauriPrinterToFrontend(printer)
 		)
 	}
@@ -232,7 +232,7 @@ export class TauriMqttService {
 	}
 
 	private notifyListeners(event: PrinterServiceEvent): void {
-		this.listeners.forEach((listener) => listener(event))
+		this.listeners.forEach(listener => listener(event))
 	}
 
 	// Initialize the service
@@ -303,7 +303,7 @@ export class TauriMqttService {
 
 			this.notifyListeners({
 				type: 'initialized',
-				data: Array.from(this.printers.values())
+				data: Array.from(this.printers.values()),
 			})
 		} catch (error) {
 			console.error('Failed to initialize TauriMqttService:', error)
@@ -313,7 +313,7 @@ export class TauriMqttService {
 
 			this.notifyListeners({
 				type: 'initialized',
-				data: Array.from(this.printers.values())
+				data: Array.from(this.printers.values()),
 			})
 		}
 	}
@@ -332,10 +332,10 @@ export class TauriMqttService {
 		const printers = Array.from(this.printers.values())
 		return {
 			total: printers.length,
-			online: printers.filter((p) => p.status !== 'offline').length,
-			printing: printers.filter((p) => p.status === 'printing').length,
-			idle: printers.filter((p) => p.status === 'idle').length,
-			error: printers.filter((p) => p.status === 'error').length
+			online: printers.filter(p => p.status !== 'offline').length,
+			printing: printers.filter(p => p.status === 'printing').length,
+			idle: printers.filter(p => p.status === 'idle').length,
+			error: printers.filter(p => p.status === 'error').length,
 		}
 	}
 

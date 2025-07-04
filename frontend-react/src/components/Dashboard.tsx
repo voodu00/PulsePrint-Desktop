@@ -5,7 +5,7 @@ import {
 	Printer as PrinterIcon,
 	Loader2,
 	Upload,
-	Download
+	Download,
 } from 'lucide-react'
 import PrinterCard from './PrinterCard'
 import StatisticsOverview from './StatisticsOverview'
@@ -17,7 +17,7 @@ import { ExportPrintersDialog } from './ExportPrintersDialog'
 import {
 	Printer,
 	PrinterStatistics,
-	PrinterServiceEvent
+	PrinterServiceEvent,
 } from '../types/printer'
 import { ImportResult } from '../types/import'
 
@@ -32,7 +32,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
 		online: 0,
 		printing: 0,
 		idle: 0,
-		error: 0
+		error: 0,
 	})
 	const [isLoading, setIsLoading] = useState(true)
 	const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
@@ -119,7 +119,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
 					model: printer.model,
 					ip: printer.ip,
 					accessCode: printer.accessCode,
-					serial: printer.serial
+					serial: printer.serial,
 				})
 			} catch (error) {
 				console.error('Failed to add printer:', error)
@@ -217,17 +217,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
 						</p>
 					</div>
 					<div className="flex items-center gap-2">
-						<button
-							onClick={handleAddPrinter}
-							className="btn btn-default"
-						>
+						<button onClick={handleAddPrinter} className="btn btn-default">
 							<Plus className="w-4 h-4 mr-2" />
 							Add Printer
 						</button>
-						<button
-							onClick={handleImportPrinters}
-							className="btn btn-outline"
-						>
+						<button onClick={handleImportPrinters} className="btn btn-outline">
 							<Upload className="w-4 h-4 mr-2" />
 							Import
 						</button>
@@ -239,10 +233,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
 							<Download className="w-4 h-4 mr-2" />
 							Export
 						</button>
-						<button
-							onClick={handleSettings}
-							className="btn btn-outline"
-						>
+						<button onClick={handleSettings} className="btn btn-outline">
 							<Settings className="w-4 h-4 mr-2" />
 							Settings
 						</button>
@@ -320,7 +311,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
 							</div>
 						</div>
 					) : (
-						printers.map((printer) => (
+						printers.map(printer => (
 							<PrinterCard
 								key={printer.id}
 								printer={printer}

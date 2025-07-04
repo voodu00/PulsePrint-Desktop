@@ -29,7 +29,7 @@ export const Dialog: React.FC<DialogProps> = ({
 	open,
 	onOpenChange,
 	children,
-	className = ''
+	className = '',
 }) => {
 	const dialogRef = useRef<HTMLDivElement>(null)
 
@@ -69,7 +69,7 @@ export const Dialog: React.FC<DialogProps> = ({
 			<div
 				ref={dialogRef}
 				className={`relative bg-white dark:bg-gray-800 rounded-lg shadow-xl mx-4 ${className}`}
-				onClick={(e) => e.stopPropagation()}
+				onClick={e => e.stopPropagation()}
 			>
 				{children}
 			</div>
@@ -79,7 +79,7 @@ export const Dialog: React.FC<DialogProps> = ({
 
 export const DialogContent: React.FC<DialogContentProps> = ({
 	className = '',
-	children
+	children,
 }) => {
 	return <div className={className}>{children}</div>
 }

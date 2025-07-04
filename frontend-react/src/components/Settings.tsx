@@ -16,7 +16,7 @@ import {
 	Sun,
 	Upload,
 	Download,
-	Database
+	Database,
 } from 'lucide-react'
 import { useSettings } from '../contexts/SettingsContext'
 import { TauriMqttService } from '../services/TauriMqttService'
@@ -34,7 +34,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
 		updateSetting,
 		hasUnsavedChanges,
 		saveSettings,
-		resetSettings
+		resetSettings,
 	} = useSettings()
 
 	const [printerService] = React.useState(() => new TauriMqttService())
@@ -59,11 +59,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
 				{/* Header */}
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-4">
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={onBack}
-						>
+						<Button variant="outline" size="sm" onClick={onBack}>
 							<ArrowLeft className="w-4 h-4 mr-2" />
 							Back to Dashboard
 						</Button>
@@ -335,7 +331,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
 							<div className="flex items-center gap-2">
 								<select
 									value={settings.refreshInterval}
-									onChange={(e) =>
+									onChange={e =>
 										updateSetting('refreshInterval', Number(e.target.value))
 									}
 									className="px-3 py-1 border rounded-md bg-background"
@@ -495,10 +491,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
 							<p className="text-sm text-orange-700 dark:text-orange-300 mb-4">
 								You have unsaved changes. Click "Save Changes" to apply them.
 							</p>
-							<Button
-								onClick={saveSettings}
-								className="w-full"
-							>
+							<Button onClick={saveSettings} className="w-full">
 								<Save className="w-4 h-4 mr-2" />
 								Save Changes
 							</Button>

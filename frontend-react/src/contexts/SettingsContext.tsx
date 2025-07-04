@@ -3,7 +3,7 @@ import React, {
 	useContext,
 	useState,
 	useEffect,
-	ReactNode
+	ReactNode,
 } from 'react'
 import { SettingsState, defaultSettings } from '../types/settings'
 
@@ -35,7 +35,7 @@ interface SettingsProviderProps {
 }
 
 export const SettingsProvider: React.FC<SettingsProviderProps> = ({
-	children
+	children,
 }) => {
 	const [settings, setSettings] = useState<SettingsState>(defaultSettings)
 	const [savedSettings, setSavedSettings] =
@@ -84,7 +84,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
 		key: K,
 		value: SettingsState[K]
 	) => {
-		setSettings((prev) => ({ ...prev, [key]: value }))
+		setSettings(prev => ({ ...prev, [key]: value }))
 	}
 
 	const saveSettings = () => {
@@ -112,7 +112,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
 				updateSetting,
 				resetSettings,
 				hasUnsavedChanges,
-				saveSettings
+				saveSettings,
 			}}
 		>
 			{children}

@@ -19,7 +19,7 @@ const StatCard: React.FC<StatCardProps> = ({
 	value,
 	icon,
 	color = 'text-muted-foreground',
-	customIndicator
+	customIndicator,
 }) => {
 	return (
 		<div className="card">
@@ -44,7 +44,7 @@ const StatCard: React.FC<StatCardProps> = ({
 }
 
 const StatisticsOverview: React.FC<StatisticsOverviewProps> = ({
-	statistics
+	statistics,
 }) => {
 	return (
 		<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">

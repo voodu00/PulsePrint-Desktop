@@ -4,7 +4,7 @@ import {
 	DialogContent,
 	DialogHeader,
 	DialogTitle,
-	DialogFooter
+	DialogFooter,
 } from './ui/dialog'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
@@ -17,7 +17,7 @@ import {
 	XCircle,
 	Loader2,
 	Copy,
-	Save
+	Save,
 } from 'lucide-react'
 import { ImportService } from '../services/ImportService'
 import { TauriMqttService } from '../services/TauriMqttService'
@@ -32,12 +32,12 @@ interface ExportPrintersDialogProps {
 export const ExportPrintersDialog: React.FC<ExportPrintersDialogProps> = ({
 	isOpen,
 	onClose,
-	printerService
+	printerService,
 }) => {
 	const [exportOptions, setExportOptions] = useState<ExportOptions>({
 		format: 'json',
 		includeTimestamps: false,
-		prettyFormat: true
+		prettyFormat: true,
 	})
 	const [exportResult, setExportResult] = useState<ExportResult | null>(null)
 	const [isLoading, setIsLoading] = useState(false)
@@ -148,11 +148,7 @@ export const ExportPrintersDialog: React.FC<ExportPrintersDialogProps> = ({
 	}
 
 	return (
-		<Dialog
-			open={isOpen}
-			onOpenChange={handleClose}
-			className="max-w-2xl"
-		>
+		<Dialog open={isOpen} onOpenChange={handleClose} className="max-w-2xl">
 			<DialogContent className="p-6">
 				<DialogHeader>
 					<DialogTitle>Export Printer Settings</DialogTitle>
@@ -203,11 +199,11 @@ export const ExportPrintersDialog: React.FC<ExportPrintersDialogProps> = ({
 										<div className="grid grid-cols-2 gap-2">
 											{(
 												['json', 'csv', 'yaml', 'txt'] as ImportFileFormat[]
-											).map((format) => (
+											).map(format => (
 												<button
 													key={format}
 													onClick={() =>
-														setExportOptions((prev) => ({ ...prev, format }))
+														setExportOptions(prev => ({ ...prev, format }))
 													}
 													className={`p-3 rounded-lg border text-left transition-colors ${
 														exportOptions.format === format
@@ -242,10 +238,10 @@ export const ExportPrintersDialog: React.FC<ExportPrintersDialogProps> = ({
 										</div>
 										<Switch
 											checked={exportOptions.includeTimestamps}
-											onCheckedChange={(checked) =>
-												setExportOptions((prev) => ({
+											onCheckedChange={checked =>
+												setExportOptions(prev => ({
 													...prev,
-													includeTimestamps: checked
+													includeTimestamps: checked,
 												}))
 											}
 										/>
@@ -260,10 +256,10 @@ export const ExportPrintersDialog: React.FC<ExportPrintersDialogProps> = ({
 										</div>
 										<Switch
 											checked={exportOptions.prettyFormat}
-											onCheckedChange={(checked) =>
-												setExportOptions((prev) => ({
+											onCheckedChange={checked =>
+												setExportOptions(prev => ({
 													...prev,
-													prettyFormat: checked
+													prettyFormat: checked,
 												}))
 											}
 											disabled={exportOptions.format !== 'json'}
@@ -273,10 +269,7 @@ export const ExportPrintersDialog: React.FC<ExportPrintersDialogProps> = ({
 							</div>
 
 							<DialogFooter>
-								<Button
-									variant="outline"
-									onClick={handleClose}
-								>
+								<Button variant="outline" onClick={handleClose}>
 									Cancel
 								</Button>
 								<Button
@@ -359,17 +352,11 @@ export const ExportPrintersDialog: React.FC<ExportPrintersDialogProps> = ({
 									</Card>
 
 									<div className="flex gap-2">
-										<Button
-											onClick={handleDownload}
-											className="flex-1"
-										>
+										<Button onClick={handleDownload} className="flex-1">
 											<Save className="w-4 h-4 mr-2" />
 											Download File
 										</Button>
-										<Button
-											variant="outline"
-											onClick={handleCopy}
-										>
+										<Button variant="outline" onClick={handleCopy}>
 											{copied ? (
 												<CheckCircle className="w-4 h-4 mr-2" />
 											) : (
@@ -382,10 +369,7 @@ export const ExportPrintersDialog: React.FC<ExportPrintersDialogProps> = ({
 							)}
 
 							<DialogFooter>
-								<Button
-									variant="outline"
-									onClick={handleClose}
-								>
+								<Button variant="outline" onClick={handleClose}>
 									Close
 								</Button>
 							</DialogFooter>

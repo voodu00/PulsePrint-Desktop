@@ -12,7 +12,7 @@ import {
 	Download,
 	Eye,
 	Loader2,
-	Info
+	Info,
 } from 'lucide-react'
 import { ImportService } from '../services/ImportService'
 import { TauriMqttService } from '../services/TauriMqttService'
@@ -20,7 +20,7 @@ import {
 	ImportPreview,
 	ImportResult,
 	ImportOptions,
-	ImportFileFormat
+	ImportFileFormat,
 } from '../types/import'
 
 interface ImportPrintersDialogProps {
@@ -36,7 +36,7 @@ export const ImportPrintersDialog: React.FC<ImportPrintersDialogProps> = ({
 	isOpen,
 	onClose,
 	printerService,
-	onImportComplete
+	onImportComplete,
 }) => {
 	const [currentStep, setCurrentStep] = useState<ImportStep>('upload')
 	const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -45,7 +45,7 @@ export const ImportPrintersDialog: React.FC<ImportPrintersDialogProps> = ({
 	const [importOptions, setImportOptions] = useState<ImportOptions>({
 		skipDuplicates: true,
 		overwriteExisting: false,
-		validateOnly: false
+		validateOnly: false,
 	})
 	const [importResult, setImportResult] = useState<ImportResult | null>(null)
 	const [isLoading, setIsLoading] = useState(false)
@@ -135,7 +135,7 @@ export const ImportPrintersDialog: React.FC<ImportPrintersDialogProps> = ({
 		fileContent,
 		importOptions,
 		importService,
-		onImportComplete
+		onImportComplete,
 	])
 
 	const handleClose = useCallback(() => {
@@ -307,11 +307,8 @@ export const ImportPrintersDialog: React.FC<ImportPrintersDialogProps> = ({
 						</CardHeader>
 						<CardContent>
 							<div className="flex flex-wrap gap-2">
-								{importPreview.duplicateSerials.map((serial) => (
-									<Badge
-										key={serial}
-										variant="secondary"
-									>
+								{importPreview.duplicateSerials.map(serial => (
+									<Badge key={serial} variant="secondary">
 										{serial}
 									</Badge>
 								))}
@@ -333,11 +330,8 @@ export const ImportPrintersDialog: React.FC<ImportPrintersDialogProps> = ({
 								These printers already exist in your system:
 							</p>
 							<div className="flex flex-wrap gap-2">
-								{importPreview.existingSerials.map((serial) => (
-									<Badge
-										key={serial}
-										variant="secondary"
-									>
+								{importPreview.existingSerials.map(serial => (
+									<Badge key={serial} variant="secondary">
 										{serial}
 									</Badge>
 								))}
@@ -384,10 +378,7 @@ export const ImportPrintersDialog: React.FC<ImportPrintersDialogProps> = ({
 				)}
 
 				<div className="flex justify-between">
-					<Button
-						variant="outline"
-						onClick={handleReset}
-					>
+					<Button variant="outline" onClick={handleReset}>
 						<Upload className="w-4 h-4 mr-2" />
 						Choose Different File
 					</Button>
@@ -416,8 +407,8 @@ export const ImportPrintersDialog: React.FC<ImportPrintersDialogProps> = ({
 					</div>
 					<Switch
 						checked={importOptions.skipDuplicates}
-						onCheckedChange={(checked) =>
-							setImportOptions((prev) => ({ ...prev, skipDuplicates: checked }))
+						onCheckedChange={checked =>
+							setImportOptions(prev => ({ ...prev, skipDuplicates: checked }))
 						}
 					/>
 				</div>
@@ -431,10 +422,10 @@ export const ImportPrintersDialog: React.FC<ImportPrintersDialogProps> = ({
 					</div>
 					<Switch
 						checked={importOptions.overwriteExisting}
-						onCheckedChange={(checked) =>
-							setImportOptions((prev) => ({
+						onCheckedChange={checked =>
+							setImportOptions(prev => ({
 								...prev,
-								overwriteExisting: checked
+								overwriteExisting: checked,
 							}))
 						}
 						disabled={importOptions.skipDuplicates}
@@ -450,8 +441,8 @@ export const ImportPrintersDialog: React.FC<ImportPrintersDialogProps> = ({
 					</div>
 					<Switch
 						checked={importOptions.validateOnly}
-						onCheckedChange={(checked) =>
-							setImportOptions((prev) => ({ ...prev, validateOnly: checked }))
+						onCheckedChange={checked =>
+							setImportOptions(prev => ({ ...prev, validateOnly: checked }))
 						}
 					/>
 				</div>
@@ -465,10 +456,7 @@ export const ImportPrintersDialog: React.FC<ImportPrintersDialogProps> = ({
 				>
 					Back to Preview
 				</Button>
-				<Button
-					onClick={handleImport}
-					disabled={isLoading}
-				>
+				<Button onClick={handleImport} disabled={isLoading}>
 					{isLoading ? (
 						<Loader2 className="w-4 h-4 mr-2 animate-spin" />
 					) : (
@@ -549,10 +537,7 @@ export const ImportPrintersDialog: React.FC<ImportPrintersDialogProps> = ({
 						<CardContent>
 							<div className="space-y-2 max-h-40 overflow-y-auto">
 								{importResult.errors.map((error, index) => (
-									<div
-										key={index}
-										className="text-sm"
-									>
+									<div key={index} className="text-sm">
 										{error.line && (
 											<span className="font-medium">Line {error.line}:</span>
 										)}{' '}
@@ -565,10 +550,7 @@ export const ImportPrintersDialog: React.FC<ImportPrintersDialogProps> = ({
 				)}
 
 				<div className="flex justify-between">
-					<Button
-						variant="outline"
-						onClick={handleReset}
-					>
+					<Button variant="outline" onClick={handleReset}>
 						Import Another File
 					</Button>
 					<Button onClick={handleClose}>Close</Button>
@@ -578,11 +560,7 @@ export const ImportPrintersDialog: React.FC<ImportPrintersDialogProps> = ({
 	}
 
 	return (
-		<Dialog
-			open={isOpen}
-			onOpenChange={handleClose}
-			className="max-w-3xl"
-		>
+		<Dialog open={isOpen} onOpenChange={handleClose} className="max-w-3xl">
 			<DialogContent className="max-h-[90vh] overflow-y-auto p-6">
 				<DialogHeader>
 					<DialogTitle>Import Printer Settings</DialogTitle>

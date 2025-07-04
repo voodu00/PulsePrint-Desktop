@@ -66,7 +66,7 @@ export class PrinterService {
 
 			this.notifyListeners({
 				type: 'initialized',
-				data: [...this.printers]
+				data: [...this.printers],
 			})
 		} catch (error) {
 			console.error('Failed to initialize PrinterService:', error)
@@ -102,12 +102,12 @@ export class PrinterService {
 				temperatures: {
 					nozzle: 0,
 					bed: 0,
-					chamber: 0
+					chamber: 0,
 				},
 				print: null,
 				filament: null,
 				error: null,
-				lastUpdate: new Date()
+				lastUpdate: new Date(),
 			}))
 		} catch (error) {
 			console.error('Failed to load printer configs:', error)
@@ -144,13 +144,13 @@ export class PrinterService {
 
 			// Merge states with printer configs
 			for (const state of states) {
-				const printer = this.printers.find((p) => p.id === state.printer_id)
+				const printer = this.printers.find(p => p.id === state.printer_id)
 				if (printer) {
 					printer.status = state.status as PrinterStatus
 					printer.temperatures = {
 						nozzle: state.nozzle_temp || 0,
 						bed: state.bed_temp || 0,
-						chamber: state.chamber_temp || 0
+						chamber: state.chamber_temp || 0,
 					}
 
 					if (state.print_progress !== null) {
@@ -160,7 +160,7 @@ export class PrinterService {
 							timeRemaining: state.time_remaining || 0,
 							layerCurrent: state.layer_current || 0,
 							layerTotal: state.layer_total || 0,
-							estimatedTotalTime: state.time_remaining || 0
+							estimatedTotalTime: state.time_remaining || 0,
 						}
 					}
 
@@ -168,7 +168,7 @@ export class PrinterService {
 						printer.filament = {
 							type: state.filament_type || 'Unknown',
 							color: state.filament_color || 'Unknown',
-							remaining: 100 // Default value since we don't track this yet
+							remaining: 100, // Default value since we don't track this yet
 						}
 					}
 
@@ -179,7 +179,7 @@ export class PrinterService {
 							stage: 0,
 							lifecycle: 'unknown',
 							gcodeState: 'unknown',
-							message: state.error_message || 'Unknown error'
+							message: state.error_message || 'Unknown error',
 						}
 					}
 
@@ -218,7 +218,7 @@ export class PrinterService {
 						model: printer.model!,
 						ip: printer.ip!,
 						access_code: printer.accessCode!,
-						serial: printer.serial!
+						serial: printer.serial!,
 					}
 
 					await invoke('add_printer', { config })
@@ -249,7 +249,7 @@ export class PrinterService {
 		try {
 			// Only check basic connectivity, don't poll for full state updates
 			// Real-time updates should come via MQTT events
-			const promises = this.printers.map(async (printer) => {
+			const promises = this.printers.map(async printer => {
 				try {
 					const isOnline = await this.checkPrinterOnline(printer)
 					const wasOffline = printer.status === 'offline'
@@ -262,7 +262,7 @@ export class PrinterService {
 							stage: 0,
 							lifecycle: 'communication',
 							gcodeState: 'unknown',
-							message: 'Printer not reachable'
+							message: 'Printer not reachable',
 						}
 						printer.lastUpdate = new Date()
 					} else if (isOnline && wasOffline) {
@@ -283,7 +283,7 @@ export class PrinterService {
 						stage: 0,
 						lifecycle: 'communication',
 						gcodeState: 'unknown',
-						message: 'Communication error'
+						message: 'Communication error',
 					}
 				}
 			})
@@ -291,14 +291,12 @@ export class PrinterService {
 			await Promise.all(promises)
 
 			// Only save and notify if there were connectivity changes
-			const hasOfflineChanges = this.printers.some(
-				(p) => p.status === 'offline'
-			)
+			const hasOfflineChanges = this.printers.some(p => p.status === 'offline')
 			if (hasOfflineChanges) {
 				await this.savePrinterStates()
 				this.notifyListeners({
 					type: 'updated',
-					data: [...this.printers]
+					data: [...this.printers],
 				})
 			}
 		} catch (error) {
@@ -321,7 +319,7 @@ export class PrinterService {
 
 			const response = await fetch(`http://${printer.ip}`, {
 				method: 'HEAD',
-				signal: controller.signal
+				signal: controller.signal,
 			})
 
 			clearTimeout(timeoutId)
@@ -337,7 +335,7 @@ export class PrinterService {
 		printer.temperatures = {
 			nozzle: state.nozzle_temp || 0,
 			bed: state.bed_temp || 0,
-			chamber: state.chamber_temp || 0
+			chamber: state.chamber_temp || 0,
 		}
 
 		if (state.print_progress !== null) {
@@ -347,7 +345,7 @@ export class PrinterService {
 				timeRemaining: state.time_remaining || 0,
 				layerCurrent: state.layer_current || 0,
 				layerTotal: state.layer_total || 0,
-				estimatedTotalTime: state.time_remaining || 0
+				estimatedTotalTime: state.time_remaining || 0,
 			}
 		} else {
 			printer.print = null
@@ -357,7 +355,7 @@ export class PrinterService {
 			printer.filament = {
 				type: state.filament_type || 'Unknown',
 				color: state.filament_color || 'Unknown',
-				remaining: 100 // Default value since we don't track this yet
+				remaining: 100, // Default value since we don't track this yet
 			}
 		} else {
 			printer.filament = null
@@ -370,7 +368,7 @@ export class PrinterService {
 				stage: 0,
 				lifecycle: 'unknown',
 				gcodeState: 'unknown',
-				message: state.error_message || 'Unknown error'
+				message: state.error_message || 'Unknown error',
 			}
 		} else {
 			printer.error = null
@@ -406,7 +404,7 @@ export class PrinterService {
 						printer.filament?.type || null,
 						printer.filament?.color || null,
 						printer.error?.message || null,
-						null // error_code (not used in current types)
+						null, // error_code (not used in current types)
 					]
 				)
 			}
@@ -459,7 +457,7 @@ export class PrinterService {
 					config.model,
 					config.ip,
 					config.access_code,
-					config.serial
+					config.serial,
 				]
 			)
 			console.log('Database insert completed for:', config.name)
@@ -489,12 +487,12 @@ export class PrinterService {
 				temperatures: {
 					nozzle: 0,
 					bed: 0,
-					chamber: 0
+					chamber: 0,
 				},
 				print: null,
 				filament: null,
 				error: null,
-				lastUpdate: new Date()
+				lastUpdate: new Date(),
 			}
 
 			this.printers.push(newPrinter)
@@ -502,12 +500,12 @@ export class PrinterService {
 			// Notify listeners
 			this.notifyListeners({
 				type: 'printer_added',
-				data: newPrinter
+				data: newPrinter,
 			})
 
 			this.notifyListeners({
 				type: 'updated',
-				data: [...this.printers]
+				data: [...this.printers],
 			})
 		} catch (error) {
 			console.error('Failed to add printer:', config.name, error)
@@ -538,19 +536,19 @@ export class PrinterService {
 			}
 
 			// Remove from memory
-			const index = this.printers.findIndex((p) => p.id === printerId)
+			const index = this.printers.findIndex(p => p.id === printerId)
 			if (index !== -1) {
 				const removedPrinter = this.printers.splice(index, 1)[0]
 
 				// Notify listeners
 				this.notifyListeners({
 					type: 'printer_removed',
-					data: removedPrinter
+					data: removedPrinter,
 				})
 
 				this.notifyListeners({
 					type: 'updated',
-					data: [...this.printers]
+					data: [...this.printers],
 				})
 			}
 		} catch (error) {
@@ -560,7 +558,7 @@ export class PrinterService {
 	}
 
 	async pausePrint(printerId: string): Promise<void> {
-		const printer = this.printers.find((p) => p.id === printerId)
+		const printer = this.printers.find(p => p.id === printerId)
 		if (printer && printer.status === 'printing') {
 			// Send pause command to actual printer
 			const { invoke } = await import('@tauri-apps/api/core')
@@ -571,13 +569,13 @@ export class PrinterService {
 
 			this.notifyListeners({
 				type: 'printer_paused',
-				data: printer
+				data: printer,
 			})
 		}
 	}
 
 	async resumePrint(printerId: string): Promise<void> {
-		const printer = this.printers.find((p) => p.id === printerId)
+		const printer = this.printers.find(p => p.id === printerId)
 		if (printer && printer.status === 'paused') {
 			// Send resume command to actual printer
 			const { invoke } = await import('@tauri-apps/api/core')
@@ -588,13 +586,13 @@ export class PrinterService {
 
 			this.notifyListeners({
 				type: 'printer_resumed',
-				data: printer
+				data: printer,
 			})
 		}
 	}
 
 	async stopPrint(printerId: string): Promise<void> {
-		const printer = this.printers.find((p) => p.id === printerId)
+		const printer = this.printers.find(p => p.id === printerId)
 		if (
 			printer &&
 			(printer.status === 'printing' || printer.status === 'paused')
@@ -610,7 +608,7 @@ export class PrinterService {
 
 			this.notifyListeners({
 				type: 'printer_stopped',
-				data: printer
+				data: printer,
 			})
 		}
 	}
@@ -620,16 +618,16 @@ export class PrinterService {
 	}
 
 	getPrinter(id: string): Printer | undefined {
-		return this.printers.find((p) => p.id === id)
+		return this.printers.find(p => p.id === id)
 	}
 
 	getStatistics(): PrinterStatistics {
 		const total = this.printers.length
-		const online = this.printers.filter((p) => p.status !== 'offline').length
+		const online = this.printers.filter(p => p.status !== 'offline').length
 		const offline = total - online
-		const printing = this.printers.filter((p) => p.status === 'printing').length
-		const idle = this.printers.filter((p) => p.status === 'idle').length
-		const error = this.printers.filter((p) => p.status === 'error').length
+		const printing = this.printers.filter(p => p.status === 'printing').length
+		const idle = this.printers.filter(p => p.status === 'idle').length
+		const error = this.printers.filter(p => p.status === 'error').length
 
 		return {
 			total,
@@ -637,7 +635,7 @@ export class PrinterService {
 			offline,
 			printing,
 			idle,
-			error
+			error,
 		}
 	}
 
@@ -664,7 +662,7 @@ export class PrinterService {
 	}
 
 	private notifyListeners(event: PrinterServiceEvent): void {
-		this.listeners.forEach((listener) => {
+		this.listeners.forEach(listener => {
 			try {
 				listener(event)
 			} catch (error) {
