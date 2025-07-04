@@ -120,13 +120,19 @@ jobs:
           cd frontend-react
           yarn build
 
-      - name: Analyze bundle size
-        run: |
-          cd frontend-react
-          npx webpack-bundle-analyzer build/static/js/*.js --report --mode static --output-file bundle-report.html
+          - name: Analyze bundle size
+      run: |
+        cd frontend-react
+        # Create a simple bundle analysis report
+        echo "# Bundle Size Analysis" > bundle-report.md
+        echo "## Build Output" >> bundle-report.md
+        ls -la build/static/js/ >> bundle-report.md
+        echo "## File Sizes" >> bundle-report.md
+        du -h build/static/js/*.js >> bundle-report.md || echo "No JS files found" >> bundle-report.md
+        du -h build/static/css/*.css >> bundle-report.md || echo "No CSS files found" >> bundle-report.md
 
-      - name: Upload bundle analysis
-        uses: actions/upload-artifact@v4
-        with:
-          name: bundle-analysis
-          path: frontend-react/bundle-report.html
+          - name: Upload bundle analysis
+      uses: actions/upload-artifact@v4
+      with:
+        name: bundle-analysis
+        path: frontend-react/bundle-report.md
