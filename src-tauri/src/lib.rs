@@ -1,5 +1,6 @@
 mod mqtt;
 mod commands;
+mod database;
 
 use commands::*;
 use mqtt::MqttService;
@@ -8,6 +9,9 @@ use tauri::Manager;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    .plugin(tauri_plugin_sql::Builder::default()
+      .add_migrations("sqlite:printpulse.db", database::get_migrations())
+      .build())
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(

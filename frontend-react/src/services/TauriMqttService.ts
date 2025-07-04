@@ -170,6 +170,18 @@ export class TauriMqttService {
 	}
 
 	async addPrinter(params: AddPrinterParams): Promise<void> {
+		// Check if printer with same serial already exists
+		const existingPrinter = Array.from(this.printers.values()).find(
+			(p) => p.serial === params.serial
+		)
+
+		if (existingPrinter) {
+			console.log(
+				`Printer with serial ${params.serial} already exists, skipping duplicate`
+			)
+			return
+		}
+
 		const config = this.convertFrontendToTauriConfig(params)
 		await invoke('add_printer', { config })
 
@@ -225,36 +237,85 @@ export class TauriMqttService {
 
 	// Initialize the service
 	async initialize(): Promise<void> {
-		// First, restore printer configurations from localStorage
-		this.loadPrintersFromStorage()
+		try {
+			// Get current printers from backend (this is the source of truth)
+			const backendPrinters = await invoke<any[]>('get_all_printers')
 
-		// Then, reconnect to any stored printers
-		const storedPrinters = Array.from(this.printers.values())
-		for (const printer of storedPrinters) {
-			try {
-				// Re-add the printer to establish MQTT connection
-				await invoke('add_printer', {
-					config: {
-						id: printer.id,
-						name: printer.name,
-						model: printer.model,
-						ip: printer.ip,
-						access_code: printer.accessCode,
-						serial: printer.serial
-					}
-				})
-			} catch (error) {
-				console.error(`Failed to reconnect to printer ${printer.name}:`, error)
+			// Clear local state and start fresh
+			this.printers.clear()
+
+			// Deduplicate printers by serial number (keep the first occurrence)
+			const uniquePrinters = new Map<string, any>()
+			for (const tauriPrinter of backendPrinters) {
+				if (!uniquePrinters.has(tauriPrinter.serial)) {
+					uniquePrinters.set(tauriPrinter.serial, tauriPrinter)
+				}
 			}
+
+			// If we found duplicates, clean them up
+			if (uniquePrinters.size < backendPrinters.length) {
+				console.log(
+					`Found ${
+						backendPrinters.length - uniquePrinters.size
+					} duplicate printers, cleaning up...`
+				)
+
+				// Remove all printers from backend
+				for (const tauriPrinter of backendPrinters) {
+					try {
+						await invoke('remove_printer', { printer_id: tauriPrinter.id })
+					} catch (error) {
+						console.error(
+							`Failed to remove duplicate printer ${tauriPrinter.id}:`,
+							error
+						)
+					}
+				}
+
+				// Re-add only unique printers
+				const uniquePrintersArray = Array.from(uniquePrinters.values())
+				for (const tauriPrinter of uniquePrintersArray) {
+					try {
+						await invoke('add_printer', { config: tauriPrinter })
+						const printer = this.convertTauriPrinterToFrontend(tauriPrinter)
+						this.printers.set(printer.id, printer)
+					} catch (error) {
+						console.error(
+							`Failed to re-add printer ${tauriPrinter.name}:`,
+							error
+						)
+					}
+				}
+			} else {
+				// No duplicates, just convert to frontend format
+				for (const tauriPrinter of backendPrinters) {
+					const printer = this.convertTauriPrinterToFrontend(tauriPrinter)
+					this.printers.set(printer.id, printer)
+				}
+			}
+
+			// Update localStorage to match backend state
+			this.savePrintersToStorage()
+
+			console.log(
+				`Initialized TauriMqttService with ${this.printers.size} printers from backend`
+			)
+
+			this.notifyListeners({
+				type: 'initialized',
+				data: Array.from(this.printers.values())
+			})
+		} catch (error) {
+			console.error('Failed to initialize TauriMqttService:', error)
+
+			// Fallback to localStorage if backend fails
+			this.loadPrintersFromStorage()
+
+			this.notifyListeners({
+				type: 'initialized',
+				data: Array.from(this.printers.values())
+			})
 		}
-
-		// Don't overwrite real-time states - let MQTT updates populate the actual status
-		// The printer-update events will update the states as MQTT data comes in
-
-		this.notifyListeners({
-			type: 'initialized',
-			data: Array.from(this.printers.values())
-		})
 	}
 
 	// Get current printer data

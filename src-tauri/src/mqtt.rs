@@ -421,18 +421,41 @@ impl MqttService {
                     let fan_gear = print_data.get("fan_gear").and_then(|v| v.as_i64()).unwrap_or(0);
                     let subtask_name = print_data.get("subtask_name").and_then(|v| v.as_str()).unwrap_or("");
 
-                    info!("Status detection for {}: gcode_state={:?}, print_real={}, mc_percent={}, layer_num={}, stg_cur={}, print_error={}", 
-                        config.name, gcode_state, print_real, mc_percent, layer_num, stg_cur, print_error);
+                    info!("Status detection for {}: gcode_state={:?}, print_real={}, mc_percent={}, layer_num={}, stg_cur={}, print_error={}, mc_remaining_time={}, fan_gear={}, subtask_name={:?}", 
+                        config.name, gcode_state, print_real, mc_percent, layer_num, stg_cur, print_error, mc_remaining_time, fan_gear, subtask_name);
 
                     // Enhanced status detection logic
                     if print_error > 0 {
                         printer.status = PrinterStatus::Error;
+                        info!("Status for {}: Error (print_error={})", config.name, print_error);
                     } else if let Some(gcode_state) = gcode_state {
                         printer.status = match gcode_state {
-                            "RUNNING" | "PRINTING" => PrinterStatus::Printing,
-                            "PAUSE" | "PAUSED" => PrinterStatus::Paused,
-                            "FAILED" | "ERROR" => PrinterStatus::Error,
-                            "FINISH" | "FINISHED" => PrinterStatus::Idle,
+                            // Standard states
+                            "RUNNING" | "PRINTING" => {
+                                info!("Status for {}: Printing (gcode_state={})", config.name, gcode_state);
+                                PrinterStatus::Printing
+                            },
+                            "PAUSE" | "PAUSED" => {
+                                info!("Status for {}: Paused (gcode_state={})", config.name, gcode_state);
+                                PrinterStatus::Paused
+                            },
+                            "FAILED" | "ERROR" => {
+                                info!("Status for {}: Error (gcode_state={})", config.name, gcode_state);
+                                PrinterStatus::Error
+                            },
+                            "FINISH" | "FINISHED" => {
+                                info!("Status for {}: Idle (gcode_state={})", config.name, gcode_state);
+                                PrinterStatus::Idle
+                            },
+                            // Bambu Lab specific states
+                            "PREPARE" | "WORKING" | "SLICING" | "PRINTING_MONITOR" => {
+                                info!("Status for {}: Printing (Bambu gcode_state={})", config.name, gcode_state);
+                                PrinterStatus::Printing
+                            },
+                            "IDLE" => {
+                                info!("Status for {}: Idle (gcode_state={})", config.name, gcode_state);
+                                PrinterStatus::Idle
+                            },
                             _ => {
                                 // When gcode_state is unclear, use comprehensive indicators
                                 let has_active_job = mc_remaining_time > 0 || (layer_num > 0 && mc_percent < 100.0);
@@ -442,20 +465,42 @@ impl MqttService {
                                 let has_progress = mc_percent > 0.0 && mc_percent < 100.0;
                                 let is_in_print_stage = stg_cur == 1 || stg_cur == 2 || stg_cur == 3; // Print stages
                                 
+                                info!("Status for {} (unknown gcode_state={}): has_active_job={}, has_progress={}, is_in_print_stage={}, print_real={}, has_high_temps={}, has_active_fan={}, has_job_name={}", 
+                                    config.name, gcode_state, has_active_job, has_progress, is_in_print_stage, print_real, has_high_temps, has_active_fan, has_job_name);
+                                
                                 if print_real == 1 {
                                     // print_real is a strong indicator of actual printing
+                                    info!("Status for {}: Printing (print_real=1)", config.name);
                                     PrinterStatus::Printing
                                 } else if has_active_job && (has_progress || is_in_print_stage) {
+                                    info!("Status for {}: Printing (active job + progress/stage)", config.name);
                                     PrinterStatus::Printing
                                 } else if is_in_print_stage && stg_cur == 2 {
+                                    info!("Status for {}: Paused (stage=2)", config.name);
                                     PrinterStatus::Paused
                                 } else if is_in_print_stage && stg_cur == 3 {
+                                    info!("Status for {}: Error (stage=3)", config.name);
                                     PrinterStatus::Error
                                 } else if has_high_temps && has_active_job && (has_active_fan || has_job_name) {
+                                    info!("Status for {}: Printing (high temps + active job + fan/name)", config.name);
                                     PrinterStatus::Printing
                                 } else if printer.temperatures.nozzle > 200 && has_active_fan && (has_job_name || has_progress) {
+                                    info!("Status for {}: Printing (hot nozzle + fan + name/progress)", config.name);
+                                    PrinterStatus::Printing
+                                } else if has_job_name && has_progress {
+                                    // If we have a job name and progress, it's likely printing
+                                    info!("Status for {}: Printing (job name + progress)", config.name);
+                                    PrinterStatus::Printing
+                                } else if mc_remaining_time > 0 && layer_num > 0 {
+                                    // If we have remaining time and layers, it's likely printing
+                                    info!("Status for {}: Printing (remaining time + layers)", config.name);
+                                    PrinterStatus::Printing
+                                } else if has_high_temps && has_active_fan {
+                                    // High temps + fan could indicate printing
+                                    info!("Status for {}: Printing (high temps + fan)", config.name);
                                     PrinterStatus::Printing
                                 } else {
+                                    info!("Status for {}: Idle (no indicators)", config.name);
                                     PrinterStatus::Idle
                                 }
                             }
@@ -466,15 +511,36 @@ impl MqttService {
                         let has_progress = mc_percent > 0.0 && mc_percent < 100.0;
                         let is_in_print_stage = stg_cur == 1 || stg_cur == 2 || stg_cur == 3;
                         
+                        info!("Status for {} (no gcode_state): has_active_job={}, has_progress={}, is_in_print_stage={}, print_real={}", 
+                            config.name, has_active_job, has_progress, is_in_print_stage, print_real);
+                        
+                        let has_job_name = !subtask_name.is_empty() && subtask_name != "Unknown" && subtask_name != "undefined";
+                        let has_high_temps = printer.temperatures.nozzle > 150 || printer.temperatures.bed > 40;
+                        let has_active_fan = fan_gear > 0;
+                        
                         if print_real == 1 {
+                            info!("Status for {}: Printing (print_real=1, no gcode_state)", config.name);
                             printer.status = PrinterStatus::Printing;
                         } else if has_active_job && (has_progress || is_in_print_stage) {
+                            info!("Status for {}: Printing (active job + progress/stage, no gcode_state)", config.name);
                             printer.status = PrinterStatus::Printing;
                         } else if is_in_print_stage && stg_cur == 2 {
+                            info!("Status for {}: Paused (stage=2, no gcode_state)", config.name);
                             printer.status = PrinterStatus::Paused;
                         } else if is_in_print_stage && stg_cur == 3 {
+                            info!("Status for {}: Error (stage=3, no gcode_state)", config.name);
                             printer.status = PrinterStatus::Error;
+                        } else if has_job_name && has_progress {
+                            info!("Status for {}: Printing (job name + progress, no gcode_state)", config.name);
+                            printer.status = PrinterStatus::Printing;
+                        } else if mc_remaining_time > 0 && layer_num > 0 {
+                            info!("Status for {}: Printing (remaining time + layers, no gcode_state)", config.name);
+                            printer.status = PrinterStatus::Printing;
+                        } else if has_high_temps && has_active_fan {
+                            info!("Status for {}: Printing (high temps + fan, no gcode_state)", config.name);
+                            printer.status = PrinterStatus::Printing;
                         } else {
+                            info!("Status for {}: Idle (no indicators, no gcode_state)", config.name);
                             printer.status = PrinterStatus::Idle;
                         }
                     }

@@ -282,7 +282,7 @@ const PrinterCard: React.FC<PrinterCardProps> = ({
 		>
 			<div className="card-header">
 				<div className="flex items-center justify-between">
-					<h3 className="card-title flex items-center gap-2 text-lg">
+					<h3 className="card-title flex items-center gap-2 text-base">
 						<Printer className="w-5 h-5" />
 						{printer.name}
 					</h3>

@@ -64,4 +64,4 @@ pub async fn stop_printer(
         action: "stop".to_string(),
     };
     send_printer_command(mqtt_service, printer_id, command).await
-} 
+}

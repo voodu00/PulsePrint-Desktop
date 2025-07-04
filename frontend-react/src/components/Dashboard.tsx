@@ -1,15 +1,25 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { Plus, Settings, Printer as PrinterIcon, Loader2 } from 'lucide-react'
+import {
+	Plus,
+	Settings,
+	Printer as PrinterIcon,
+	Loader2,
+	Upload,
+	Download
+} from 'lucide-react'
 import PrinterCard from './PrinterCard'
 import StatisticsOverview from './StatisticsOverview'
+
 import { TauriMqttService } from '../services/TauriMqttService'
-import { MockPrinterService } from '../services/MockPrinterService'
 import { AddPrinterDialog } from './AddPrinterDialog'
+import { ImportPrintersDialog } from './ImportPrintersDialog'
+import { ExportPrintersDialog } from './ExportPrintersDialog'
 import {
 	Printer,
 	PrinterStatistics,
 	PrinterServiceEvent
 } from '../types/printer'
+import { ImportResult } from '../types/import'
 
 interface DashboardProps {
 	onShowSettings: () => void
@@ -26,11 +36,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
 	})
 	const [isLoading, setIsLoading] = useState(true)
 	const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
-	const [useMockService, setUseMockService] = useState(false)
-	const [printerService] = useState(() =>
-		useMockService ? new MockPrinterService() : new TauriMqttService()
-	)
+	const [printerService] = useState(() => new TauriMqttService())
 	const [showAddPrinter, setShowAddPrinter] = useState(false)
+	const [showImportPrinters, setShowImportPrinters] = useState(false)
+	const [showExportPrinters, setShowExportPrinters] = useState(false)
 
 	const handlePrinterServiceEvent = useCallback(
 		(event: PrinterServiceEvent) => {
@@ -97,20 +106,60 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
 	}, [])
 
 	const handleAddPrinterSubmit = useCallback(
-		(printer: {
+		async (printer: {
 			name: string
 			model: string
 			ip: string
 			accessCode: string
 			serial: string
 		}) => {
-			printerService.addPrinter(printer)
+			try {
+				await printerService.addPrinter({
+					name: printer.name,
+					model: printer.model,
+					ip: printer.ip,
+					accessCode: printer.accessCode,
+					serial: printer.serial
+				})
+			} catch (error) {
+				console.error('Failed to add printer:', error)
+			}
 		},
 		[printerService]
 	)
 
 	const handleAddPrinterCancel = useCallback(() => {
 		setShowAddPrinter(false)
+	}, [])
+
+	const handleImportPrinters = useCallback(() => {
+		setShowImportPrinters(true)
+	}, [])
+
+	const handleImportPrintersClose = useCallback(() => {
+		setShowImportPrinters(false)
+	}, [])
+
+	const handleImportComplete = useCallback(
+		async (result: ImportResult) => {
+			if (result.success && result.imported > 0 && !result.validateOnly) {
+				// Refresh the dashboard to show newly imported printers
+				try {
+					await printerService.initialize()
+				} catch (error) {
+					console.error('Failed to refresh printers after import:', error)
+				}
+			}
+		},
+		[printerService]
+	)
+
+	const handleExportPrinters = useCallback(() => {
+		setShowExportPrinters(true)
+	}, [])
+
+	const handleExportPrintersClose = useCallback(() => {
+		setShowExportPrinters(false)
 	}, [])
 
 	const handleSettings = useCallback(() => {
@@ -168,25 +217,27 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
 						</p>
 					</div>
 					<div className="flex items-center gap-2">
-						<div className="flex items-center gap-2 mr-4">
-							<label className="text-sm font-medium">Mock Service:</label>
-							<button
-								onClick={() => setUseMockService(!useMockService)}
-								className={`px-3 py-1 rounded text-xs font-medium ${
-									useMockService
-										? 'bg-green-100 text-green-800'
-										: 'bg-gray-100 text-gray-800'
-								}`}
-							>
-								{useMockService ? 'ON' : 'OFF'}
-							</button>
-						</div>
 						<button
 							onClick={handleAddPrinter}
 							className="btn btn-default"
 						>
 							<Plus className="w-4 h-4 mr-2" />
 							Add Printer
+						</button>
+						<button
+							onClick={handleImportPrinters}
+							className="btn btn-outline"
+						>
+							<Upload className="w-4 h-4 mr-2" />
+							Import
+						</button>
+						<button
+							onClick={handleExportPrinters}
+							className="btn btn-outline"
+							disabled={printers.length === 0}
+						>
+							<Download className="w-4 h-4 mr-2" />
+							Export
 						</button>
 						<button
 							onClick={handleSettings}
@@ -203,6 +254,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
 					isOpen={showAddPrinter}
 					onClose={handleAddPrinterCancel}
 					onAddPrinter={handleAddPrinterSubmit}
+				/>
+
+				{/* Import Printers Dialog */}
+				<ImportPrintersDialog
+					isOpen={showImportPrinters}
+					onClose={handleImportPrintersClose}
+					printerService={printerService}
+					onImportComplete={handleImportComplete}
+				/>
+
+				{/* Export Printers Dialog */}
+				<ExportPrintersDialog
+					isOpen={showExportPrinters}
+					onClose={handleExportPrintersClose}
+					printerService={printerService}
 				/>
 
 				{/* Statistics Overview */}
@@ -235,13 +301,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
 								<p className="text-muted-foreground mb-4">
 									Add your first printer to start monitoring your 3D prints.
 								</p>
-								<button
-									onClick={handleAddPrinter}
-									className="btn btn-default"
-								>
-									<Plus className="w-4 h-4 mr-2" />
-									Add Your First Printer
-								</button>
+								<div className="flex gap-2 justify-center">
+									<button
+										onClick={handleAddPrinter}
+										className="btn btn-default"
+									>
+										<Plus className="w-4 h-4 mr-2" />
+										Add Your First Printer
+									</button>
+									<button
+										onClick={handleImportPrinters}
+										className="btn btn-outline"
+									>
+										<Upload className="w-4 h-4 mr-2" />
+										Import Printers
+									</button>
+								</div>
 							</div>
 						</div>
 					) : (

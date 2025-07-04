@@ -71,6 +71,8 @@ export interface PrinterServiceEvent {
 	type:
 		| 'initialized'
 		| 'updated'
+		| 'printer_added'
+		| 'printer_removed'
 		| 'printer_paused'
 		| 'printer_resumed'
 		| 'printer_stopped'

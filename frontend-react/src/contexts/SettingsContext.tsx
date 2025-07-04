@@ -51,11 +51,27 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
 				const mergedSettings = { ...defaultSettings, ...parsed }
 				setSettings(mergedSettings)
 				setSavedSettings(mergedSettings)
+				// Apply dark mode immediately on load
+				applyDarkMode(mergedSettings.darkMode)
 			} catch (error) {
 				console.error('Failed to load settings:', error)
 			}
 		}
 	}, [])
+
+	// Apply dark mode to document
+	const applyDarkMode = (isDark: boolean) => {
+		if (isDark) {
+			document.documentElement.classList.add('dark')
+		} else {
+			document.documentElement.classList.remove('dark')
+		}
+	}
+
+	// Watch for dark mode changes and apply them immediately
+	useEffect(() => {
+		applyDarkMode(settings.darkMode)
+	}, [settings.darkMode])
 
 	// Check for unsaved changes
 	useEffect(() => {

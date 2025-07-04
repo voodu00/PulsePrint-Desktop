@@ -1,0 +1,5 @@
+name,model,ip,accessCode,serial
+"Bambu Lab A1 Mini","A1 Mini","192.168.1.100","12345678","BL-A1M-001"
+"Bambu Lab X1 Carbon","X1 Carbon","192.168.1.101","87654321","BL-X1C-001"
+"Bambu Lab P1P","P1P","192.168.1.102","11223344","BL-P1P-001"
+"Prusa MK4","MK4","192.168.1.103","55667788","PR-MK4-001" 
