@@ -11,7 +11,9 @@ import {
 	Wifi,
 	Save,
 	RotateCcw,
-	RefreshCw
+	RefreshCw,
+	Moon,
+	Sun
 } from 'lucide-react'
 import { useSettings } from '../contexts/SettingsContext'
 
@@ -243,7 +245,14 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
 
 						<div className="flex items-center justify-between">
 							<div className="space-y-1">
-								<h3 className="text-sm font-medium">Dark Mode</h3>
+								<h3 className="text-sm font-medium flex items-center gap-2">
+									{settings.darkMode ? (
+										<Moon className="w-4 h-4" />
+									) : (
+										<Sun className="w-4 h-4" />
+									)}
+									Dark Mode
+								</h3>
 								<p className="text-sm text-muted-foreground">
 									Switch between light and dark themes
 								</p>
@@ -254,9 +263,10 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
 									onCheckedChange={(checked: boolean) =>
 										updateSetting('darkMode', checked)
 									}
-									disabled
 								/>
-								<Badge variant="secondary">Coming Soon</Badge>
+								<Badge variant={settings.darkMode ? 'default' : 'secondary'}>
+									{settings.darkMode ? 'Dark' : 'Light'}
+								</Badge>
 							</div>
 						</div>
 					</CardContent>

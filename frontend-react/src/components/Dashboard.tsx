@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { Plus, Settings, Printer as PrinterIcon, Loader2 } from 'lucide-react'
 import PrinterCard from './PrinterCard'
 import StatisticsOverview from './StatisticsOverview'
-import { TauriMqttService } from '../services/TauriMqttService'
-import { MockPrinterService } from '../services/MockPrinterService'
+
+import { PrinterService } from '../services/PrinterService'
 import { AddPrinterDialog } from './AddPrinterDialog'
 import {
 	Printer,
@@ -26,10 +26,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
 	})
 	const [isLoading, setIsLoading] = useState(true)
 	const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
-	const [useMockService, setUseMockService] = useState(false)
-	const [printerService] = useState(() =>
-		useMockService ? new MockPrinterService() : new TauriMqttService()
-	)
+	const [printerService] = useState(() => new PrinterService())
 	const [showAddPrinter, setShowAddPrinter] = useState(false)
 
 	const handlePrinterServiceEvent = useCallback(
@@ -104,7 +101,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
 			accessCode: string
 			serial: string
 		}) => {
-			printerService.addPrinter(printer)
+			const printerConfig = {
+				id: `printer-${Date.now()}`, // Generate unique ID
+				name: printer.name,
+				model: printer.model,
+				ip: printer.ip,
+				access_code: printer.accessCode,
+				serial: printer.serial
+			}
+			printerService.addPrinter(printerConfig)
 		},
 		[printerService]
 	)
@@ -168,19 +173,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
 						</p>
 					</div>
 					<div className="flex items-center gap-2">
-						<div className="flex items-center gap-2 mr-4">
-							<label className="text-sm font-medium">Mock Service:</label>
-							<button
-								onClick={() => setUseMockService(!useMockService)}
-								className={`px-3 py-1 rounded text-xs font-medium ${
-									useMockService
-										? 'bg-green-100 text-green-800'
-										: 'bg-gray-100 text-gray-800'
-								}`}
-							>
-								{useMockService ? 'ON' : 'OFF'}
-							</button>
-						</div>
 						<button
 							onClick={handleAddPrinter}
 							className="btn btn-default"

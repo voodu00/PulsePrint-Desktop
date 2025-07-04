@@ -7,6 +7,7 @@
     "@radix-ui/react-switch": "^1.2.5",
     "@tauri-apps/api": "^2.6.0",
     "@tauri-apps/plugin-log": "^2.6.0",
+    "@tauri-apps/plugin-sql": "^2.3.0",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
