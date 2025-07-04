@@ -1,0 +1,17 @@
+- name: Bambu Lab A1 Mini
+  model: A1 Mini
+  ip: 192.168.1.100
+  accessCode: '12345678'
+  serial: BL-A1M-001
+
+- name: Bambu Lab X1 Carbon
+  model: X1 Carbon
+  ip: 192.168.1.101
+  accessCode: '87654321'
+  serial: BL-X1C-001
+
+- name: Bambu Lab P1P
+  model: P1P
+  ip: 192.168.1.102
+  accessCode: '11223344'
+  serial: BL-P1P-001

@@ -37,6 +37,7 @@ export class PrinterService {
 	private listeners: ((event: PrinterServiceEvent) => void)[] = []
 	private updateInterval: NodeJS.Timeout | null = null
 	private isInitialized = false
+	private databaseInstance: any = null
 
 	async initialize(): Promise<void> {
 		if (this.isInitialized) {
@@ -44,11 +45,19 @@ export class PrinterService {
 		}
 
 		try {
+			// Ensure database is loaded and available
+			console.log('Initializing database connection...')
+			await this.getDatabase()
+			console.log('Database connection established')
+
 			// Load printer configurations from database
 			await this.loadPrinterConfigs()
 
 			// Load last known states from database
 			await this.loadPrinterStates()
+
+			// Register all printers with backend MQTT service
+			await this.registerPrintersWithBackend()
 
 			// Start monitoring printers
 			this.startMonitoring()
@@ -68,23 +77,21 @@ export class PrinterService {
 	private async loadPrinterConfigs(): Promise<void> {
 		try {
 			const db = await this.getDatabase()
-			const configs = await db.select<
-				Array<{
-					id: string
-					name: string
-					model: string
-					ip: string
-					access_code: string
-					serial: string
-					created_at: string
-					updated_at: string
-				}>
-			>(
+			const configs = (await db.select(
 				'SELECT id, name, model, ip, access_code, serial, created_at, updated_at FROM printers ORDER BY name'
-			)
+			)) as Array<{
+				id: string
+				name: string
+				model: string
+				ip: string
+				access_code: string
+				serial: string
+				created_at: string
+				updated_at: string
+			}>
 
 			// Convert configs to printer objects with offline status initially
-			this.printers = configs.map((config) => ({
+			this.printers = configs.map((config: any) => ({
 				id: config.id,
 				name: config.name,
 				model: config.model,
@@ -111,31 +118,29 @@ export class PrinterService {
 	private async loadPrinterStates(): Promise<void> {
 		try {
 			const db = await this.getDatabase()
-			const states = await db.select<
-				Array<{
-					printer_id: string
-					status: string
-					nozzle_temp: number
-					bed_temp: number
-					chamber_temp: number
-					print_progress: number | null
-					print_filename: string | null
-					layer_current: number | null
-					layer_total: number | null
-					time_remaining: number | null
-					filament_type: string | null
-					filament_color: string | null
-					error_message: string | null
-					error_code: number | null
-					last_seen: string
-					updated_at: string
-				}>
-			>(`
+			const states = (await db.select(`
 				SELECT printer_id, status, nozzle_temp, bed_temp, chamber_temp, print_progress,
 				       print_filename, layer_current, layer_total, time_remaining, filament_type,
 				       filament_color, error_message, error_code, last_seen, updated_at
 				FROM printer_states ORDER BY last_seen DESC
-			`)
+			`)) as Array<{
+				printer_id: string
+				status: string
+				nozzle_temp: number
+				bed_temp: number
+				chamber_temp: number
+				print_progress: number | null
+				print_filename: string | null
+				layer_current: number | null
+				layer_total: number | null
+				time_remaining: number | null
+				filament_type: string | null
+				filament_color: string | null
+				error_message: string | null
+				error_code: number | null
+				last_seen: string
+				updated_at: string
+			}>
 
 			// Merge states with printer configs
 			for (const state of states) {
@@ -183,6 +188,52 @@ export class PrinterService {
 			}
 		} catch (error) {
 			console.error('Failed to load printer states:', error)
+		}
+	}
+
+	private async registerPrintersWithBackend(): Promise<void> {
+		try {
+			const { invoke } = await import('@tauri-apps/api/core')
+
+			// Register each printer with the backend MQTT service
+			for (const printer of this.printers) {
+				try {
+					// Skip printers that don't have required fields
+					if (
+						!printer.model ||
+						!printer.ip ||
+						!printer.accessCode ||
+						!printer.serial
+					) {
+						console.warn(
+							'Skipping printer with missing required fields:',
+							printer.name
+						)
+						continue
+					}
+
+					const config: PrinterConfig = {
+						id: printer.id,
+						name: printer.name,
+						model: printer.model!,
+						ip: printer.ip!,
+						access_code: printer.accessCode!,
+						serial: printer.serial!
+					}
+
+					await invoke('add_printer', { config })
+					console.log('Registered printer with backend:', printer.name)
+				} catch (error) {
+					console.error(
+						'Failed to register printer with backend:',
+						printer.name,
+						error
+					)
+					// Continue with other printers
+				}
+			}
+		} catch (error) {
+			console.error('Failed to register printers with backend:', error)
 		}
 	}
 
@@ -365,15 +416,38 @@ export class PrinterService {
 	}
 
 	private async getDatabase() {
+		// Return existing instance if available
+		if (this.databaseInstance) {
+			return this.databaseInstance
+		}
+
 		// Import Database dynamically to avoid issues in development
 		const Database = (await import('@tauri-apps/plugin-sql')).default
-		return Database.get('sqlite:printpulse.db')
+
+		try {
+			// Load the database (this will create it if it doesn't exist and run migrations)
+			console.log('Loading database sqlite:printpulse.db')
+			this.databaseInstance = await Database.load('sqlite:printpulse.db')
+			console.log('Database loaded successfully')
+			return this.databaseInstance
+		} catch (error) {
+			console.error('Failed to load database:', error)
+			throw new Error(
+				`Database connection failed: ${
+					error instanceof Error ? error.message : 'Unknown error'
+				}`
+			)
+		}
 	}
 
 	async addPrinter(config: PrinterConfig): Promise<void> {
 		try {
+			console.log('Adding printer config:', config)
+
 			// Save config to database
 			const db = await this.getDatabase()
+			console.log('Database connection obtained')
+
 			await db.execute(
 				`
 				INSERT OR REPLACE INTO printers (id, name, model, ip, access_code, serial, updated_at)
@@ -388,6 +462,20 @@ export class PrinterService {
 					config.serial
 				]
 			)
+			console.log('Database insert completed for:', config.name)
+
+			// Register with backend MQTT service
+			try {
+				const { invoke } = await import('@tauri-apps/api/core')
+				await invoke('add_printer', { config })
+				console.log(
+					'Printer registered with backend MQTT service:',
+					config.name
+				)
+			} catch (error) {
+				console.error('Failed to register printer with backend:', error)
+				// Continue anyway - the printer is saved in the database
+			}
 
 			// Create printer object
 			const newPrinter: Printer = {
@@ -422,8 +510,14 @@ export class PrinterService {
 				data: [...this.printers]
 			})
 		} catch (error) {
-			console.error('Failed to add printer:', error)
-			throw error
+			console.error('Failed to add printer:', config.name, error)
+
+			// Provide more specific error information
+			if (error instanceof Error) {
+				throw new Error(`Database error: ${error.message}`)
+			} else {
+				throw new Error(`Database error: ${JSON.stringify(error)}`)
+			}
 		}
 	}
 
@@ -432,6 +526,16 @@ export class PrinterService {
 			// Remove from database
 			const db = await this.getDatabase()
 			await db.execute('DELETE FROM printers WHERE id = $1', [printerId])
+
+			// Remove from backend MQTT service
+			try {
+				const { invoke } = await import('@tauri-apps/api/core')
+				await invoke('remove_printer', { printer_id: printerId })
+				console.log('Removed printer from backend:', printerId)
+			} catch (error) {
+				console.error('Failed to remove printer from backend:', error)
+				// Continue anyway - the printer is removed from the database
+			}
 
 			// Remove from memory
 			const index = this.printers.findIndex((p) => p.id === printerId)

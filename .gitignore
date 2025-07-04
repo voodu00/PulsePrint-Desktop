@@ -22,6 +22,7 @@
 /frontend-react/.env.development.local
 /frontend-react/.env.test.local
 /frontend-react/.env.production.local
+_private_printers.yaml
 
 # Logs
 npm-debug.log*

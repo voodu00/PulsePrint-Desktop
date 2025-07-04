@@ -13,9 +13,16 @@ import {
 	RotateCcw,
 	RefreshCw,
 	Moon,
-	Sun
+	Sun,
+	Upload,
+	Download,
+	Database
 } from 'lucide-react'
 import { useSettings } from '../contexts/SettingsContext'
+import { TauriMqttService } from '../services/TauriMqttService'
+import { ImportPrintersDialog } from './ImportPrintersDialog'
+import { ExportPrintersDialog } from './ExportPrintersDialog'
+import { ImportResult } from '../types/import'
 
 interface SettingsProps {
 	onBack: () => void
@@ -29,6 +36,22 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
 		saveSettings,
 		resetSettings
 	} = useSettings()
+
+	const [printerService] = React.useState(() => new TauriMqttService())
+	const [showImportDialog, setShowImportDialog] = React.useState(false)
+	const [showExportDialog, setShowExportDialog] = React.useState(false)
+
+	React.useEffect(() => {
+		printerService.initialize()
+		return () => printerService.destroy()
+	}, [printerService])
+
+	const handleImportComplete = React.useCallback((result: ImportResult) => {
+		if (result.success && result.imported > 0 && !result.validateOnly) {
+			// Show success message or refresh data
+			console.log(`Successfully imported ${result.imported} printers`)
+		}
+	}, [])
 
 	return (
 		<div className="min-h-screen bg-background p-6">
@@ -329,6 +352,72 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
 					</CardContent>
 				</Card>
 
+				{/* Data Management */}
+				<Card>
+					<CardHeader>
+						<CardTitle className="flex items-center gap-2">
+							<Database className="w-5 h-5" />
+							Data Management
+						</CardTitle>
+					</CardHeader>
+					<CardContent className="space-y-6">
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+							<div className="space-y-3">
+								<h3 className="text-sm font-medium">Import Printer Settings</h3>
+								<p className="text-sm text-muted-foreground">
+									Import printer configurations from JSON, CSV, YAML, or TXT
+									files. Useful for bulk adding printers or migrating from other
+									systems.
+								</p>
+								<Button
+									onClick={() => setShowImportDialog(true)}
+									variant="outline"
+									className="w-full"
+								>
+									<Upload className="w-4 h-4 mr-2" />
+									Import Printers
+								</Button>
+							</div>
+							<div className="space-y-3">
+								<h3 className="text-sm font-medium">Export Printer Settings</h3>
+								<p className="text-sm text-muted-foreground">
+									Export your current printer configurations to various formats.
+									Great for backups or sharing configurations.
+								</p>
+								<Button
+									onClick={() => setShowExportDialog(true)}
+									variant="outline"
+									className="w-full"
+									disabled={printerService.getPrinters().length === 0}
+								>
+									<Download className="w-4 h-4 mr-2" />
+									Export Printers
+								</Button>
+							</div>
+						</div>
+
+						<div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+							<h4 className="font-medium text-sm mb-2 text-blue-900 dark:text-blue-100">
+								Supported File Formats
+							</h4>
+							<div className="grid grid-cols-2 gap-2 text-sm text-blue-800 dark:text-blue-200">
+								<div>
+									<strong>JSON:</strong> Structured data format
+								</div>
+								<div>
+									<strong>CSV:</strong> Spreadsheet compatible
+								</div>
+								<div>
+									<strong>YAML:</strong> Human-readable format
+								</div>
+								<div>
+									<strong>TXT:</strong> Simple key-value pairs
+								</div>
+							</div>
+						</div>
+					</CardContent>
+				</Card>
+
 				{/* Connection Info */}
 				<Card>
 					<CardHeader>
@@ -416,6 +505,20 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
 						</CardContent>
 					</Card>
 				)}
+
+				{/* Import/Export Dialogs */}
+				<ImportPrintersDialog
+					isOpen={showImportDialog}
+					onClose={() => setShowImportDialog(false)}
+					printerService={printerService}
+					onImportComplete={handleImportComplete}
+				/>
+
+				<ExportPrintersDialog
+					isOpen={showExportDialog}
+					onClose={() => setShowExportDialog(false)}
+					printerService={printerService}
+				/>
 			</div>
 		</div>
 	)
