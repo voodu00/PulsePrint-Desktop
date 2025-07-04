@@ -50,7 +50,7 @@ jobs:
       - name: Run Tauri integration tests
         run: |
           cd src-tauri
-          cargo test integration_tests --features integration
+          cargo test --test integration_tests
 
   e2e-tests:
     name: E2E Tests (Playwright)
