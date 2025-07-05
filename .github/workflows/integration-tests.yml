@@ -88,19 +88,20 @@ jobs:
           cd frontend-react
           yarn install --frozen-lockfile
 
-      - name: Install Playwright
+      - name: Install Playwright browsers
         run: |
           cd frontend-react
           yarn playwright install --with-deps
 
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli --locked
-
-      - name: Build Tauri app for testing
-        run: cargo tauri build --bundles none
-
       - name: Run E2E tests
         run: |
           cd frontend-react
-          echo "E2E tests placeholder - Playwright setup needed"
-          # yarn test:e2e
+          yarn test:e2e
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: frontend-react/playwright-report/
+          retention-days: 30
