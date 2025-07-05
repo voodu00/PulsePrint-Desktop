@@ -1,23 +1,13 @@
-# DISABLED: Security Audit workflow is temporarily disabled
-# This workflow requires specific GitHub settings that are only available for open source projects
-# It will be re-enabled when the project is ready to be open sourced
-#
-# To re-enable: uncomment the 'on:' section below
-
 name: Security Audit
 
-# on:
-#   push:
-#     branches: [main, develop]
-#   pull_request:
-#     branches: [main, develop]
-#   schedule:
-#     # Run security audit every Monday at 9 AM UTC
-#     - cron: '0 9 * * 1'
-
-# Workflow is disabled - no triggers active
 on:
-  workflow_dispatch: # Can be manually triggered if needed
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run security audit every Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
 
 jobs:
   audit-frontend:
@@ -87,17 +77,19 @@ jobs:
           cd src-tauri
           cargo audit --deny warnings || true
 
-  dependency-review:
-    name: Dependency Review
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Dependency Review
-        uses: actions/dependency-review-action@v4
-        with:
-          fail-on-severity: moderate
-          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC
+  # DISABLED: Dependency Review requires GitHub settings only available for open source projects
+  # To re-enable when going open source: uncomment the job below
+  # dependency-review:
+  #   name: Dependency Review
+  #   runs-on: ubuntu-latest
+  #   if: github.event_name == 'pull_request'
+  #
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Dependency Review
+  #       uses: actions/dependency-review-action@v4
+  #       with:
+  #         fail-on-severity: moderate
+  #         allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC
