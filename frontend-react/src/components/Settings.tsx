@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
@@ -46,10 +46,10 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
 		return () => printerService.destroy()
 	}, [printerService])
 
-	const handleImportComplete = React.useCallback((result: ImportResult) => {
+	const handleImportComplete = useCallback((result: ImportResult) => {
 		if (result.success && result.imported > 0 && !result.validateOnly) {
 			// Show success message or refresh data
-			console.log(`Successfully imported ${result.imported} printers`)
+			// Import completed successfully
 		}
 	}, [])
 

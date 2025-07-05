@@ -16,12 +16,8 @@ import {
 } from 'lucide-react'
 import { ImportService } from '../services/ImportService'
 import { TauriMqttService } from '../services/TauriMqttService'
-import {
-	ImportPreview,
-	ImportResult,
-	ImportOptions,
-	ImportFileFormat,
-} from '../types/import'
+import { ImportPreview, ImportResult, ImportOptions } from '../types/import'
+import { getFormatIcon, getFormatColor } from '../utils/formatUtils'
 
 interface ImportPrintersDialogProps {
 	isOpen: boolean
@@ -158,36 +154,6 @@ export const ImportPrintersDialog: React.FC<ImportPrintersDialogProps> = ({
 		setError(null)
 		setIsLoading(false)
 	}, [])
-
-	const getFormatIcon = (format: ImportFileFormat) => {
-		switch (format) {
-			case 'json':
-				return '{ }'
-			case 'csv':
-				return 'CSV'
-			case 'yaml':
-				return 'YAML'
-			case 'txt':
-				return 'TXT'
-			default:
-				return '?'
-		}
-	}
-
-	const getFormatColor = (format: ImportFileFormat) => {
-		switch (format) {
-			case 'json':
-				return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-			case 'csv':
-				return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-			case 'yaml':
-				return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
-			case 'txt':
-				return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-			default:
-				return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-		}
-	}
 
 	const renderUploadStep = () => (
 		<div className="space-y-4">

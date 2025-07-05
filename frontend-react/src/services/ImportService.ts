@@ -8,6 +8,8 @@ import {
 	ImportPreview,
 	ExportOptions,
 	ExportResult,
+	RawPrinterData,
+	ParsedJsonData,
 } from '../types/import'
 import { TauriMqttService } from './TauriMqttService'
 import { AddPrinterParams } from '../types/printer'
@@ -102,14 +104,14 @@ export class ImportService {
 		errors: ImportError[]
 	): Promise<ImportablePrinter[]> {
 		try {
-			const data = JSON.parse(content)
+			const data = JSON.parse(content) as ParsedJsonData
 
 			// Handle both array and object with printers array
-			let printersArray: any[]
+			let printersArray: RawPrinterData[]
 			if (Array.isArray(data)) {
-				printersArray = data
+				printersArray = data as RawPrinterData[]
 			} else if (data.printers && Array.isArray(data.printers)) {
-				printersArray = data.printers
+				printersArray = data.printers as RawPrinterData[]
 			} else {
 				errors.push({
 					message:
@@ -194,7 +196,7 @@ export class ImportService {
 				continue
 			}
 
-			const printer: any = {}
+			const printer: RawPrinterData = {}
 			normalizedHeader.forEach((field, index) => {
 				printer[field] = values[index]
 			})
@@ -219,7 +221,7 @@ export class ImportService {
 			// Simple YAML parser for basic structures
 			const printers: ImportablePrinter[] = []
 			const lines = content.split('\n')
-			let currentPrinter: any = {}
+			let currentPrinter: RawPrinterData = {}
 			let lineNumber = 0
 
 			for (let i = 0; i < lines.length; i++) {
@@ -310,7 +312,7 @@ export class ImportService {
 		for (let blockIndex = 0; blockIndex < blocks.length; blockIndex++) {
 			const block = blocks[blockIndex].trim()
 			const lines = block.split('\n')
-			const printer: any = {}
+			const printer: RawPrinterData = {}
 
 			for (const line of lines) {
 				if (line.includes(':')) {
@@ -335,7 +337,7 @@ export class ImportService {
 	 * Normalize printer data from various formats
 	 */
 	private normalizePrinter(
-		data: any,
+		data: RawPrinterData,
 		lineNumber: number,
 		errors: ImportError[]
 	): ImportablePrinter | null {
@@ -575,6 +577,7 @@ export class ImportService {
 				imported++
 				successfulPrinters.push(printer)
 			} catch (error) {
+				// eslint-disable-next-line no-console
 				console.error('Import error for printer:', printer.name, error)
 
 				let errorMessage = 'Unknown error'
@@ -660,7 +663,7 @@ export class ImportService {
 		}
 	}
 
-	private exportToCSV(data: any[]): string {
+	private exportToCSV(data: Record<string, string>[]): string {
 		if (data.length === 0) return ''
 
 		const headers = Object.keys(data[0])
@@ -674,7 +677,7 @@ export class ImportService {
 		return csvData.join('\n')
 	}
 
-	private exportToYAML(data: any[]): string {
+	private exportToYAML(data: Record<string, string>[]): string {
 		return data
 			.map(printer =>
 				Object.entries(printer)
@@ -684,7 +687,7 @@ export class ImportService {
 			.join('\n\n')
 	}
 
-	private exportToTXT(data: any[]): string {
+	private exportToTXT(data: Record<string, string>[]): string {
 		return data
 			.map(printer =>
 				Object.entries(printer)

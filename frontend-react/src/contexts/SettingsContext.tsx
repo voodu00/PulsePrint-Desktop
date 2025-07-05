@@ -54,6 +54,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
 				// Apply dark mode immediately on load
 				applyDarkMode(mergedSettings.darkMode)
 			} catch (error) {
+				// eslint-disable-next-line no-console
 				console.error('Failed to load settings:', error)
 			}
 		}

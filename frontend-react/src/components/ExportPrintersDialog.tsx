@@ -22,6 +22,11 @@ import {
 import { ImportService } from '../services/ImportService'
 import { TauriMqttService } from '../services/TauriMqttService'
 import { ExportOptions, ExportResult, ImportFileFormat } from '../types/import'
+import {
+	getFormatIcon,
+	getFormatColor,
+	getFormatDescription,
+} from '../utils/formatUtils'
 
 interface ExportPrintersDialogProps {
 	isOpen: boolean
@@ -90,6 +95,7 @@ export const ExportPrintersDialog: React.FC<ExportPrintersDialogProps> = ({
 			setCopied(true)
 			setTimeout(() => setCopied(false), 2000)
 		} catch (err) {
+			// eslint-disable-next-line no-console
 			console.error('Failed to copy to clipboard:', err)
 		}
 	}, [exportResult])
@@ -101,51 +107,6 @@ export const ExportPrintersDialog: React.FC<ExportPrintersDialogProps> = ({
 		setCopied(false)
 		onClose()
 	}, [onClose])
-
-	const getFormatIcon = (format: ImportFileFormat) => {
-		switch (format) {
-			case 'json':
-				return '{ }'
-			case 'csv':
-				return 'CSV'
-			case 'yaml':
-				return 'YAML'
-			case 'txt':
-				return 'TXT'
-			default:
-				return '?'
-		}
-	}
-
-	const getFormatColor = (format: ImportFileFormat) => {
-		switch (format) {
-			case 'json':
-				return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-			case 'csv':
-				return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-			case 'yaml':
-				return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
-			case 'txt':
-				return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-			default:
-				return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-		}
-	}
-
-	const getFormatDescription = (format: ImportFileFormat) => {
-		switch (format) {
-			case 'json':
-				return 'JavaScript Object Notation - structured data format'
-			case 'csv':
-				return 'Comma-Separated Values - spreadsheet compatible'
-			case 'yaml':
-				return "YAML Ain't Markup Language - human-readable format"
-			case 'txt':
-				return 'Plain text - simple key-value pairs'
-			default:
-				return 'Unknown format'
-		}
-	}
 
 	return (
 		<Dialog open={isOpen} onOpenChange={handleClose} className="max-w-2xl">

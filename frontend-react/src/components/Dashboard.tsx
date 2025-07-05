@@ -49,12 +49,24 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
 					const printersArray = Array.isArray(event.data)
 						? event.data
 						: [event.data]
-					setPrinters(printersArray)
+
+					// For 'updated' events, we should always use the full printer list from the service
+					// to avoid partial updates that could cause display issues
+					if (event.type === 'updated') {
+						const fullPrinterList = printerService.getPrinters()
+						setPrinters(fullPrinterList)
+					} else {
+						setPrinters(printersArray)
+					}
+
 					setStatistics(printerService.getStatistics())
 					setLastUpdate(new Date())
 					if (event.type === 'initialized') {
 						setIsLoading(false)
 					}
+					break
+				case 'printer_added':
+					// This event will be followed by an 'updated' event
 					break
 				case 'printer_paused':
 				case 'printer_resumed':
@@ -71,6 +83,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
 			try {
 				await printerService.pausePrint(printerId)
 			} catch (error) {
+				// eslint-disable-next-line no-console
 				console.error('Failed to pause print:', error)
 			}
 		},
@@ -82,6 +95,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
 			try {
 				await printerService.resumePrint(printerId)
 			} catch (error) {
+				// eslint-disable-next-line no-console
 				console.error('Failed to resume print:', error)
 			}
 		},
@@ -94,6 +108,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
 				try {
 					await printerService.stopPrint(printerId)
 				} catch (error) {
+					// eslint-disable-next-line no-console
 					console.error('Failed to stop print:', error)
 				}
 			}
@@ -122,6 +137,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
 					serial: printer.serial,
 				})
 			} catch (error) {
+				// eslint-disable-next-line no-console
 				console.error('Failed to add printer:', error)
 			}
 		},
@@ -143,12 +159,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
 	const handleImportComplete = useCallback(
 		async (result: ImportResult) => {
 			if (result.success && result.imported > 0 && !result.validateOnly) {
-				// Refresh the dashboard to show newly imported printers
-				try {
-					await printerService.initialize()
-				} catch (error) {
-					console.error('Failed to refresh printers after import:', error)
-				}
+				// No need to refresh - the addPrinter events have already updated the local state
+				// Just update statistics to reflect the new printer count
+				setStatistics(printerService.getStatistics())
+				setLastUpdate(new Date())
 			}
 		},
 		[printerService]
@@ -172,6 +186,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
 				printerService.addEventListener(handlePrinterServiceEvent)
 				await printerService.initialize()
 			} catch (error) {
+				// eslint-disable-next-line no-console
 				console.error('Failed to initialize dashboard:', error)
 				setIsLoading(false)
 			}
