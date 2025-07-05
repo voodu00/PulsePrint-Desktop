@@ -142,7 +142,8 @@ jobs:
       - name: Build application
         run: |
           cd frontend-react
-          yarn build
+          # Set CI=false to prevent treating warnings as errors for bundle analysis
+          CI=false yarn build
 
       - name: Analyze bundle size
         run: |
