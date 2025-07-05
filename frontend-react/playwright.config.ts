@@ -28,6 +28,9 @@ export default defineConfig({
 
 		/* Record video only when test fails */
 		video: 'retain-on-failure',
+
+		/* Wait for page to be ready before starting tests */
+		actionTimeout: 10000,
 	},
 
 	/* Configure projects for major browsers */
@@ -51,9 +54,14 @@ export default defineConfig({
 
 	/* Run your local dev server before starting the tests */
 	webServer: {
-		command: 'yarn start',
+		command: 'DISABLE_ESLINT_PLUGIN=true WDS_SOCKET_PORT=0 yarn start',
 		url: 'http://localhost:3000',
 		reuseExistingServer: !process.env.CI,
 		timeout: 120 * 1000, // 2 minutes for Tauri app to start
+		env: {
+			// Disable webpack overlay that interferes with tests
+			DISABLE_ESLINT_PLUGIN: 'true',
+			WDS_SOCKET_PORT: '0',
+		},
 	},
 })
