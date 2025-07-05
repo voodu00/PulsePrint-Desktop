@@ -25,10 +25,21 @@ jobs:
           cache: 'yarn'
           cache-dependency-path: frontend-react/yarn.lock
 
-      - name: Install dependencies
+      - name: Install frontend dependencies
         run: |
           cd frontend-react
-          yarn install --frozen-lockfile
+          # Retry yarn install up to 3 times to handle temporary registry failures
+          for i in 1 2 3; do
+            if yarn install --frozen-lockfile; then
+              break
+            elif [ $i -eq 3 ]; then
+              echo "Failed to install dependencies after 3 attempts"
+              exit 1
+            else
+              echo "Attempt $i failed, retrying in 10 seconds..."
+              sleep 10
+            fi
+          done
 
       - name: Run npm audit
         run: |
