@@ -26,6 +26,7 @@ jobs:
           cache-dependency-path: frontend-react/yarn.lock
 
       - name: Install frontend dependencies
+        shell: bash
         run: |
           cd frontend-react
           # Retry yarn install up to 3 times to handle temporary registry failures
