@@ -164,8 +164,15 @@ jobs:
             fi
           done
 
+      - name: Build frontend
+        run: |
+          cd frontend-react
+          yarn build
+
       - name: Install Tauri CLI
         run: cargo install tauri-cli --locked
 
       - name: Build application
-        run: cargo tauri build --no-bundle
+        run: |
+          cd src-tauri
+          cargo tauri build --no-bundle --config '{"build":{"beforeBuildCommand":""}}'

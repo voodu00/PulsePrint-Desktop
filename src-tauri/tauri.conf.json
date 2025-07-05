@@ -6,8 +6,8 @@
 	"build": {
 		"frontendDist": "../frontend-react/build",
 		"devUrl": "http://localhost:3000",
-		"beforeDevCommand": "yarn --cwd /Users/ryanjordan/Documents/development/printpulse-desktop/frontend-react start",
-		"beforeBuildCommand": "yarn --cwd /Users/ryanjordan/Documents/development/printpulse-desktop/frontend-react build"
+		"beforeDevCommand": "yarn --cwd ../frontend-react start",
+		"beforeBuildCommand": "yarn --cwd ../frontend-react build"
 	},
 	"app": {
 		"windows": [
