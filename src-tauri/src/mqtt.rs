@@ -8,7 +8,6 @@ use rustls::{
 	Error as TlsError,
 };
 use serde::{Deserialize, Serialize};
-use serde_json;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -274,9 +273,9 @@ impl MqttService {
 
 					// Subscribe to status topic
 					if let Err(e) = client.subscribe(&status_topic, QoS::AtMostOnce).await {
-						error!("Failed to subscribe to {}: {}", status_topic, e);
+						error!("Failed to subscribe to {status_topic}: {e}");
 					} else {
-						info!("Subscribed to {}", status_topic);
+						info!("Subscribed to {status_topic}");
 					}
 
 					// Request full status immediately after connection
@@ -330,7 +329,7 @@ impl MqttService {
 							.await;
 						}
 						Err(e) => {
-							error!("Failed to parse MQTT message: {}", e);
+							error!("Failed to parse MQTT message: {e}");
 						}
 					}
 				}
@@ -610,7 +609,7 @@ impl MqttService {
                             if mc_remaining_time > 0 && total_time > 0 {
                                 let elapsed_time = total_time - (mc_remaining_time * 60);
                                 let time_progress = (elapsed_time as f64 / total_time as f64) * 100.0;
-                                if time_progress >= 0.0 && time_progress <= 100.0 {
+                                if (0.0..=100.0).contains(&time_progress) {
                                     // Use time progress as a fallback or validation
                                     if mc_percent == 0.0 {
                                         best_progress = best_progress.max(time_progress);
@@ -620,8 +619,7 @@ impl MqttService {
                         }
 
                         // Validation: Ensure progress is reasonable
-                        if best_progress > 100.0 { best_progress = 100.0; }
-                        if best_progress < 0.0 { best_progress = 0.0; }
+                        best_progress = best_progress.clamp(0.0, 100.0);
 
                         let file_name = if !subtask_name.is_empty() && subtask_name != "undefined" {
                             subtask_name.to_string()
@@ -691,14 +689,14 @@ impl MqttService {
 		if let Some(printer) = updated_printer {
 			// Emit update to frontend
 			if let Err(e) = app_handle.emit("printer-update", &printer) {
-				error!("Failed to emit printer update: {}", e);
+				error!("Failed to emit printer update: {e}");
 			}
 		}
 	}
 
 	async fn emit_printer_update(&self, printer: &Printer) {
 		if let Err(e) = self.app_handle.emit("printer-update", printer) {
-			error!("Failed to emit printer update: {}", e);
+			error!("Failed to emit printer update: {e}");
 		}
 	}
 
@@ -731,8 +729,7 @@ impl MqttService {
 			(2, _) => "Bed adhesion failure".to_string(),
 			(3, _) => "Temperature error".to_string(),
 			_ => format!(
-				"Error: print_error={}, error_code={}",
-				print_error, error_code
+				"Error: print_error={print_error}, error_code={error_code}"
 			),
 		}
 	}
@@ -759,10 +756,10 @@ impl MqttService {
 
 		// Emit removal to frontend
 		if let Err(e) = self.app_handle.emit("printer-removed", printer_id) {
-			error!("Failed to emit printer removal: {}", e);
+			error!("Failed to emit printer removal: {e}");
 		}
 
-		info!("Removed printer: {}", printer_id);
+		info!("Removed printer: {printer_id}");
 		Ok(())
 	}
 }
