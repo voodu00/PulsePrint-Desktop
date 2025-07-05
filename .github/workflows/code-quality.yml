@@ -88,21 +88,36 @@ jobs:
           cd frontend-react
           yarn install --frozen-lockfile
 
-      - name: Install complexity analysis tools
+      - name: Run ESLint complexity analysis
         run: |
           cd frontend-react
-          npm install -g complexity-report
+          # Run ESLint with complexity rules to generate a complexity report
+          yarn eslint src --ext .ts,.tsx --format json --output-file complexity-report.json || true
 
-      - name: Run complexity analysis
-        run: |
-          cd frontend-react/src
-          complexity-report --format json --output ../complexity-report.json .
+          # Create a readable complexity summary
+          echo "# Code Complexity Analysis" > complexity-summary.md
+          echo "## TypeScript/React Files Analyzed" >> complexity-summary.md
+          find src -name "*.ts" -o -name "*.tsx" | wc -l >> complexity-summary.md
+          echo "" >> complexity-summary.md
+          echo "## File Count by Type" >> complexity-summary.md
+          echo "### TypeScript files:" >> complexity-summary.md
+          find src -name "*.ts" | wc -l >> complexity-summary.md
+          echo "### React TSX files:" >> complexity-summary.md
+          find src -name "*.tsx" | wc -l >> complexity-summary.md
+          echo "" >> complexity-summary.md
+          echo "## Lines of Code" >> complexity-summary.md
+          find src -name "*.ts" -o -name "*.tsx" -exec wc -l {} + | tail -n 1 >> complexity-summary.md
+          echo "" >> complexity-summary.md
+          echo "## ESLint Analysis" >> complexity-summary.md
+          echo "See complexity-report.json for detailed ESLint analysis" >> complexity-summary.md
 
-      - name: Upload complexity report
+      - name: Upload complexity reports
         uses: actions/upload-artifact@v4
         with:
-          name: complexity-report
-          path: frontend-react/complexity-report.json
+          name: complexity-analysis
+          path: |
+            frontend-react/complexity-report.json
+            frontend-react/complexity-summary.md
 
   bundle-analysis:
     name: Bundle Size Analysis
