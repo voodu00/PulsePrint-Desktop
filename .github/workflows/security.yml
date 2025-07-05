@@ -1,13 +1,23 @@
+# DISABLED: Security Audit workflow is temporarily disabled
+# This workflow requires specific GitHub settings that are only available for open source projects
+# It will be re-enabled when the project is ready to be open sourced
+#
+# To re-enable: uncomment the 'on:' section below
+
 name: Security Audit
 
+# on:
+#   push:
+#     branches: [main, develop]
+#   pull_request:
+#     branches: [main, develop]
+#   schedule:
+#     # Run security audit every Monday at 9 AM UTC
+#     - cron: '0 9 * * 1'
+
+# Workflow is disabled - no triggers active
 on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main, develop]
-  schedule:
-    # Run security audit every Monday at 9 AM UTC
-    - cron: '0 9 * * 1'
+  workflow_dispatch: # Can be manually triggered if needed
 
 jobs:
   audit-frontend:
