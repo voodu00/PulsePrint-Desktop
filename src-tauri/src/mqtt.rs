@@ -728,9 +728,7 @@ impl MqttService {
 			(1, _) => "Print error occurred".to_string(),
 			(2, _) => "Bed adhesion failure".to_string(),
 			(3, _) => "Temperature error".to_string(),
-			_ => format!(
-				"Error: print_error={print_error}, error_code={error_code}"
-			),
+			_ => format!("Error: print_error={print_error}, error_code={error_code}"),
 		}
 	}
 
