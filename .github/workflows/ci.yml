@@ -45,11 +45,10 @@ jobs:
           cd frontend-react
           yarn tsc --noEmit
 
-      # Temporarily disabled until proper Tauri mocking is implemented
-      # - name: Run tests
-      #   run: |
-      #     cd frontend-react
-      #     yarn test --watchAll=false --coverage
+      - name: Run tests
+        run: |
+          cd frontend-react
+          yarn test --watchAll=false --coverage
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
