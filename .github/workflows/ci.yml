@@ -168,4 +168,4 @@ jobs:
         run: cargo install tauri-cli --locked
 
       - name: Build application
-        run: cargo tauri build --bundles none
+        run: cargo tauri build --no-bundle
