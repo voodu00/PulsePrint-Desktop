@@ -10,9 +10,12 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  frontend-checks:
-    name: Frontend Code Quality
+  # Build jobs that produce reusable artifacts
+  build-frontend:
+    name: Build Frontend
     runs-on: ubuntu-latest
+    outputs:
+      cache-key: ${{ steps.cache-key.outputs.key }}
 
     steps:
       - name: Checkout code
@@ -25,10 +28,102 @@ jobs:
           cache: 'yarn'
           cache-dependency-path: frontend-react/yarn.lock
 
+      - name: Generate cache key
+        id: cache-key
+        run: |
+          echo "key=frontend-${{ hashFiles('frontend-react/package.json', 'frontend-react/yarn.lock', 'frontend-react/src/**/*') }}" >> $GITHUB_OUTPUT
+
       - name: Install dependencies
         run: |
           cd frontend-react
           yarn install --frozen-lockfile
+
+      - name: Build frontend
+        run: |
+          cd frontend-react
+          yarn build
+
+      - name: Upload frontend build
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend-react/build/
+          retention-days: 1
+
+      - name: Upload node_modules
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-node-modules
+          path: frontend-react/node_modules/
+          retention-days: 1
+
+  build-rust:
+    name: Build Rust (Release)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target/
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build Rust (release)
+        run: |
+          cd src-tauri
+          cargo build --release
+
+      - name: Upload Rust build
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-build-release
+          path: src-tauri/target/release/
+          retention-days: 1
+
+  # Quality check jobs that reuse artifacts
+  frontend-checks:
+    name: Frontend Code Quality
+    runs-on: ubuntu-latest
+    needs: build-frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+          cache-dependency-path: frontend-react/yarn.lock
+
+      - name: Download node_modules
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-node-modules
+          path: frontend-react/node_modules/
 
       - name: Run ESLint
         run: |
@@ -89,7 +184,7 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            target/
+            src-tauri/target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run Clippy
@@ -107,13 +202,10 @@ jobs:
           cd src-tauri
           cargo test
 
-      - name: Build verification
-        run: |
-          cd src-tauri
-          cargo build --release
-
+  # Cross-platform builds that reuse frontend build
   cross-platform-build:
     name: Cross-Platform Build Test
+    needs: build-frontend
     strategy:
       matrix:
         include:
@@ -136,6 +228,12 @@ jobs:
           cache: 'yarn'
           cache-dependency-path: frontend-react/yarn.lock
 
+      - name: Download frontend build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend-react/build/
+
       - name: Install Linux dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
@@ -153,27 +251,14 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install frontend dependencies
-        shell: bash
-        run: |
-          cd frontend-react
-          # Retry yarn install up to 3 times to handle temporary registry failures
-          for i in 1 2 3; do
-            if yarn install --frozen-lockfile; then
-              break
-            elif [ $i -eq 3 ]; then
-              echo "Failed to install dependencies after 3 attempts"
-              exit 1
-            else
-              echo "Attempt $i failed, retrying in 10 seconds..."
-              sleep 10
-            fi
-          done
-
-      - name: Build frontend
-        run: |
-          cd frontend-react
-          yarn build
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target/
+          key: ${{ matrix.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install Tauri CLI
         run: cargo install tauri-cli --locked

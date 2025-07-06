@@ -26,21 +26,9 @@ jobs:
           cache-dependency-path: frontend-react/yarn.lock
 
       - name: Install frontend dependencies
-        shell: bash
         run: |
           cd frontend-react
-          # Retry yarn install up to 3 times to handle temporary registry failures
-          for i in 1 2 3; do
-            if yarn install --frozen-lockfile; then
-              break
-            elif [ $i -eq 3 ]; then
-              echo "Failed to install dependencies after 3 attempts"
-              exit 1
-            else
-              echo "Attempt $i failed, retrying in 10 seconds..."
-              sleep 10
-            fi
-          done
+          yarn install --frozen-lockfile
 
       - name: Run frontend tests with coverage
         run: |
@@ -80,8 +68,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-  complexity-analysis:
-    name: Code Complexity Analysis
+  # Build frontend for analysis (shared with other jobs)
+  build-frontend-analysis:
+    name: Build Frontend for Analysis
     runs-on: ubuntu-latest
 
     steps:
@@ -99,6 +88,48 @@ jobs:
         run: |
           cd frontend-react
           yarn install --frozen-lockfile
+
+      - name: Build application
+        run: |
+          cd frontend-react
+          # Set CI=false to prevent treating warnings as errors for bundle analysis
+          CI=false yarn build
+
+      - name: Upload frontend build
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build-analysis
+          path: frontend-react/build/
+          retention-days: 1
+
+      - name: Upload node_modules
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-node-modules-analysis
+          path: frontend-react/node_modules/
+          retention-days: 1
+
+  complexity-analysis:
+    name: Code Complexity Analysis
+    runs-on: ubuntu-latest
+    needs: build-frontend-analysis
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+          cache-dependency-path: frontend-react/yarn.lock
+
+      - name: Download node_modules
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-node-modules-analysis
+          path: frontend-react/node_modules/
 
       - name: Run ESLint complexity analysis
         run: |
@@ -134,28 +165,17 @@ jobs:
   bundle-analysis:
     name: Bundle Size Analysis
     runs-on: ubuntu-latest
+    needs: build-frontend-analysis
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Download frontend build
+        uses: actions/download-artifact@v4
         with:
-          node-version: '18'
-          cache: 'yarn'
-          cache-dependency-path: frontend-react/yarn.lock
-
-      - name: Install dependencies
-        run: |
-          cd frontend-react
-          yarn install --frozen-lockfile
-
-      - name: Build application
-        run: |
-          cd frontend-react
-          # Set CI=false to prevent treating warnings as errors for bundle analysis
-          CI=false yarn build
+          name: frontend-build-analysis
+          path: frontend-react/build/
 
       - name: Analyze bundle size
         run: |
