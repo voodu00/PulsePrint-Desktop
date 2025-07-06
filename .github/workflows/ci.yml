@@ -216,11 +216,69 @@ jobs:
           cargo test
 
   # ===================
-  # CROSS-PLATFORM BUILDS (DEPEND ON FRONTEND BUILD)
+  # CROSS-PLATFORM RUST BUILDS (PARALLEL WITH FRONTEND)
+  # ===================
+  build-rust-cross-platform:
+    name: Build Rust Cross-Platform
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: Linux
+          - os: windows-latest
+            name: Windows
+          - os: macos-latest
+            name: macOS
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target/
+          key: ${{ matrix.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build Rust (release)
+        run: |
+          cd src-tauri
+          cargo build --release
+
+      - name: Upload Rust build
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-build-${{ matrix.os }}
+          path: src-tauri/target/release/
+          retention-days: 1
+
+  # ===================
+  # CROSS-PLATFORM TAURI BUILDS (DEPEND ON BOTH BUILDS)
   # ===================
   cross-platform-build:
-    name: Cross-Platform Build
-    needs: build-frontend
+    name: Cross-Platform Tauri Build
+    needs: [build-frontend, build-rust-cross-platform]
     strategy:
       matrix:
         include:
@@ -248,6 +306,12 @@ jobs:
         with:
           name: frontend-build
           path: frontend-react/build/
+
+      - name: Download Rust build
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-build-${{ matrix.os }}
+          path: src-tauri/target/release/
 
       - name: Install Linux dependencies
         if: matrix.os == 'ubuntu-latest'
@@ -278,9 +342,10 @@ jobs:
       - name: Install Tauri CLI
         run: cargo install tauri-cli --locked
 
-      - name: Build application
+      - name: Build Tauri application
         run: |
           cd src-tauri
+          # Use pre-built Rust binary and frontend build
           cargo tauri build --no-bundle --config '{"build":{"beforeBuildCommand":""}}'
 
   # ===================
@@ -288,7 +353,7 @@ jobs:
   # ===================
   integration-tests:
     name: Integration Tests
-    needs: [build-frontend, build-rust]
+    needs: [build-frontend, build-rust-cross-platform]
     strategy:
       matrix:
         include:
@@ -320,6 +385,12 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Download Rust build
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-build-${{ matrix.os }}
+          path: src-tauri/target/release/
 
       - name: Cache Rust dependencies
         uses: actions/cache@v4
