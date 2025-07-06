@@ -82,6 +82,7 @@ jobs:
       - name: Build verification
         run: |
           cd src-tauri
+          # Use release build to reduce memory usage and improve performance
           cargo build --release
 
   cross-platform-build:

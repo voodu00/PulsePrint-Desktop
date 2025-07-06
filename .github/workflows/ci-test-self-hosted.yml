@@ -58,9 +58,9 @@ jobs:
           yarn build
           echo "✅ Frontend build successful"
           echo ""
-          echo "Testing Rust compilation..."
+          echo "Testing Rust compilation check..."
           cd ../src-tauri
-          if cargo check; then
+          if cargo check --release; then
             echo "✅ Rust compilation check successful"
           else
             echo "❌ Rust compilation failed - this might be due to missing system dependencies"
