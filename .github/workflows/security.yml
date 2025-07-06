@@ -12,18 +12,14 @@ on:
 jobs:
   audit-frontend:
     name: Frontend Security Audit
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'yarn'
-          cache-dependency-path: frontend-react/yarn.lock
+      - name: Setup self-hosted runner
+        uses: ./.github/actions/setup-self-hosted
 
       - name: Install frontend dependencies
         shell: bash
@@ -54,27 +50,14 @@ jobs:
 
   audit-rust:
     name: Rust Security Audit
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Linux dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev \
-            build-essential \
-            curl \
-            wget \
-            file \
-            libxdo-dev \
-            libssl-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Setup self-hosted runner
+        uses: ./.github/actions/setup-self-hosted
 
       - name: Install cargo-audit
         run: cargo install cargo-audit --locked
