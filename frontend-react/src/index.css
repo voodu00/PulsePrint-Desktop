@@ -3,366 +3,366 @@
 @tailwind utilities;
 
 @layer base {
-	:root {
-		--background: 0 0% 100%;
-		--foreground: 222.2 84% 4.9%;
-		--card: 0 0% 100%;
-		--card-foreground: 222.2 84% 4.9%;
-		--popover: 0 0% 100%;
-		--popover-foreground: 222.2 84% 4.9%;
-		--primary: 222.2 47.4% 11.2%;
-		--primary-foreground: 210 40% 98%;
-		--secondary: 210 40% 96%;
-		--secondary-foreground: 222.2 84% 4.9%;
-		--muted: 210 40% 96%;
-		--muted-foreground: 215.4 16.3% 46.9%;
-		--accent: 210 40% 96%;
-		--accent-foreground: 222.2 84% 4.9%;
-		--destructive: 0 84.2% 60.2%;
-		--destructive-foreground: 210 40% 98%;
-		--border: 214.3 31.8% 91.4%;
-		--input: 214.3 31.8% 91.4%;
-		--ring: 222.2 84% 4.9%;
-		--radius: 0.5rem;
-	}
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 84% 4.9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --radius: 0.5rem;
+  }
 
-	.dark {
-		--background: 222.2 84% 4.9%;
-		--foreground: 210 40% 98%;
-		--card: 222.2 84% 4.9%;
-		--card-foreground: 210 40% 98%;
-		--popover: 222.2 84% 4.9%;
-		--popover-foreground: 210 40% 98%;
-		--primary: 210 40% 98%;
-		--primary-foreground: 222.2 47.4% 11.2%;
-		--secondary: 217.2 32.6% 17.5%;
-		--secondary-foreground: 210 40% 98%;
-		--muted: 217.2 32.6% 17.5%;
-		--muted-foreground: 215 20.2% 65.1%;
-		--accent: 217.2 32.6% 17.5%;
-		--accent-foreground: 210 40% 98%;
-		--destructive: 0 62.8% 30.6%;
-		--destructive-foreground: 210 40% 98%;
-		--border: 217.2 32.6% 17.5%;
-		--input: 217.2 32.6% 17.5%;
-		--ring: 212.7 26.8% 83.9%;
-	}
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
 }
 
 @layer base {
-	* {
-		@apply border-border;
-	}
+  * {
+    @apply border-border;
+  }
 
-	body {
-		@apply bg-background text-foreground;
-		font-family:
-			-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
-			Arial, sans-serif;
-	}
+  body {
+    @apply bg-background text-foreground;
+    font-family:
+      -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+      Arial, sans-serif;
+  }
 }
 
 @layer components {
-	.card {
-		@apply bg-card text-card-foreground rounded-lg border shadow-sm overflow-hidden;
-	}
+  .card {
+    @apply bg-card text-card-foreground rounded-lg border shadow-sm overflow-hidden;
+  }
 
-	.card-header {
-		@apply flex flex-col space-y-1.5 p-6 pt-4;
-	}
+  .card-header {
+    @apply flex flex-col space-y-1.5 p-6 pt-4;
+  }
 
-	.card-title {
-		@apply text-2xl font-semibold leading-none tracking-tight;
-	}
+  .card-title {
+    @apply text-2xl font-semibold leading-none tracking-tight;
+  }
 
-	.card-content {
-		@apply p-6 pt-0;
-	}
+  .card-content {
+    @apply p-6 pt-0;
+  }
 
-	.btn {
-		@apply inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
-	}
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+  }
 
-	.btn-default {
-		@apply bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2;
-	}
+  .btn-default {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2;
+  }
 
-	.btn-outline {
-		@apply border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2;
-	}
+  .btn-outline {
+    @apply border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2;
+  }
 
-	.btn-secondary {
-		@apply bg-secondary text-secondary-foreground hover:bg-secondary/80 h-10 px-4 py-2;
-	}
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80 h-10 px-4 py-2;
+  }
 
-	.btn-destructive {
-		@apply bg-destructive text-destructive-foreground hover:bg-destructive/90 h-10 px-4 py-2;
-	}
+  .btn-destructive {
+    @apply bg-destructive text-destructive-foreground hover:bg-destructive/90 h-10 px-4 py-2;
+  }
 
-	.btn-sm {
-		@apply h-9 rounded-md px-3 text-xs;
-	}
+  .btn-sm {
+    @apply h-9 rounded-md px-3 text-xs;
+  }
 
-	.badge {
-		@apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
-	}
+  .badge {
+    @apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
+  }
 
-	.badge-default {
-		@apply border-transparent bg-primary text-primary-foreground hover:bg-primary/80;
-	}
+  .badge-default {
+    @apply border-transparent bg-primary text-primary-foreground hover:bg-primary/80;
+  }
 
-	.badge-outline {
-		@apply text-foreground;
-	}
+  .badge-outline {
+    @apply text-foreground;
+  }
 
-	.badge-idle {
-		@apply border-transparent bg-blue-500 text-white;
-	}
+  .badge-idle {
+    @apply border-transparent bg-blue-500 text-white;
+  }
 
-	.badge-printing {
-		@apply border-transparent bg-green-500 text-white;
-	}
+  .badge-printing {
+    @apply border-transparent bg-green-500 text-white;
+  }
 
-	.badge-paused {
-		@apply border-transparent bg-yellow-500 text-black;
-	}
+  .badge-paused {
+    @apply border-transparent bg-yellow-500 text-black;
+  }
 
-	.badge-error {
-		@apply border-transparent bg-red-500 text-white;
-	}
+  .badge-error {
+    @apply border-transparent bg-red-500 text-white;
+  }
 
-	.badge-offline {
-		@apply border-transparent bg-gray-500 text-white;
-	}
+  .badge-offline {
+    @apply border-transparent bg-gray-500 text-white;
+  }
 
-	.badge-connecting {
-		@apply border-transparent bg-purple-500 text-white;
-	}
+  .badge-connecting {
+    @apply border-transparent bg-purple-500 text-white;
+  }
 
-	.progress {
-		@apply relative h-4 w-full overflow-hidden rounded-full bg-secondary;
-	}
+  .progress {
+    @apply relative h-4 w-full overflow-hidden rounded-full bg-secondary;
+  }
 
-	.progress-bar {
-		@apply h-full w-full flex-1 transition-all duration-300 ease-in-out;
-		background: linear-gradient(135deg, #3b82f6 0%, #10b981 50%, #059669 100%);
-		box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
-	}
+  .progress-bar {
+    @apply h-full w-full flex-1 transition-all duration-300 ease-in-out;
+    background: linear-gradient(135deg, #3b82f6 0%, #10b981 50%, #059669 100%);
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+  }
 
-	.printer-card.status-idle {
-		@apply border-t-4 border-t-blue-500;
-	}
+  .printer-card.status-idle {
+    @apply border-t-4 border-t-blue-500;
+  }
 
-	.printer-card.status-printing {
-		@apply border-t-4 border-t-green-500;
-	}
+  .printer-card.status-printing {
+    @apply border-t-4 border-t-green-500;
+  }
 
-	.printer-card.status-paused {
-		@apply border-t-4 border-t-yellow-500;
-	}
+  .printer-card.status-paused {
+    @apply border-t-4 border-t-yellow-500;
+  }
 
-	.printer-card.status-error {
-		@apply border-t-4 border-t-red-500;
-	}
+  .printer-card.status-error {
+    @apply border-t-4 border-t-red-500;
+  }
 
-	.printer-card.status-offline {
-		@apply border-t-4 border-t-gray-500;
-	}
+  .printer-card.status-offline {
+    @apply border-t-4 border-t-gray-500;
+  }
 
-	.printer-card.status-connecting {
-		@apply border-t-4 border-t-purple-500;
-	}
+  .printer-card.status-connecting {
+    @apply border-t-4 border-t-purple-500;
+  }
 
-	.temperature-grid {
-		@apply grid grid-cols-2 gap-2 text-sm;
-	}
+  .temperature-grid {
+    @apply grid grid-cols-2 gap-2 text-sm;
+  }
 
-	.temperature-item {
-		@apply flex justify-between;
-	}
+  .temperature-item {
+    @apply flex justify-between;
+  }
 
-	.temperature-hot {
-		@apply text-red-500;
-	}
+  .temperature-hot {
+    @apply text-red-500;
+  }
 
-	.temperature-warm {
-		@apply text-orange-500;
-	}
+  .temperature-warm {
+    @apply text-orange-500;
+  }
 
-	.print-info {
-		@apply flex flex-wrap gap-4 text-sm text-muted-foreground;
-	}
+  .print-info {
+    @apply flex flex-wrap gap-4 text-sm text-muted-foreground;
+  }
 
-	.print-info-item {
-		@apply flex items-center gap-1;
-	}
+  .print-info-item {
+    @apply flex items-center gap-1;
+  }
 
-	.control-buttons {
-		@apply flex gap-2 flex-wrap;
-	}
+  .control-buttons {
+    @apply flex gap-2 flex-wrap;
+  }
 
-	.printer-card {
-		@apply relative transition-all duration-200 hover:shadow-md;
-	}
+  .printer-card {
+    @apply relative transition-all duration-200 hover:shadow-md;
+  }
 }
 
 @layer utilities {
-	.animate-pulse {
-		animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-	}
+  .animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
 
-	@keyframes pulse {
-		0%,
-		100% {
-			opacity: 1;
-		}
-		50% {
-			opacity: 0.5;
-		}
-	}
+  @keyframes pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
 
-	.animate-spin {
-		animation: spin 1s linear infinite;
-	}
+  .animate-spin {
+    animation: spin 1s linear infinite;
+  }
 
-	@keyframes spin {
-		from {
-			transform: rotate(0deg);
-		}
-		to {
-			transform: rotate(360deg);
-		}
-	}
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
 
-	/* Flash animations for settings preview */
-	.idle-flash {
-		animation: idle-flash 2s ease-in-out infinite;
-	}
+  /* Flash animations for settings preview */
+  .idle-flash {
+    animation: idle-flash 2s ease-in-out infinite;
+  }
 
-	@keyframes idle-flash {
-		0%,
-		50%,
-		100% {
-			opacity: 1;
-		}
-		25%,
-		75% {
-			opacity: 0.3;
-		}
-	}
+  @keyframes idle-flash {
+    0%,
+    50%,
+    100% {
+      opacity: 1;
+    }
+    25%,
+    75% {
+      opacity: 0.3;
+    }
+  }
 
-	.error-flash {
-		animation: error-flash 1s ease-in-out infinite;
-	}
+  .error-flash {
+    animation: error-flash 1s ease-in-out infinite;
+  }
 
-	@keyframes error-flash {
-		0%,
-		100% {
-			opacity: 1;
-			box-shadow: 0 0 0 rgba(239, 68, 68, 0);
-		}
-		50% {
-			opacity: 0.8;
-			box-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
-		}
-	}
+  @keyframes error-flash {
+    0%,
+    100% {
+      opacity: 1;
+      box-shadow: 0 0 0 rgba(239, 68, 68, 0);
+    }
+    50% {
+      opacity: 0.8;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+    }
+  }
 
-	/* Card flash animations with transparent overlay */
-	.printer-card-idle-flash {
-		position: relative;
-		animation: card-idle-flash 3s ease-in-out infinite;
-	}
+  /* Card flash animations with transparent overlay */
+  .printer-card-idle-flash {
+    position: relative;
+    animation: card-idle-flash 3s ease-in-out infinite;
+  }
 
-	.printer-card-idle-flash::before {
-		content: '';
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		background: rgba(59, 130, 246, 0.2);
-		border-radius: inherit;
-		opacity: 0;
-		animation: card-idle-overlay 3s ease-in-out infinite;
-		pointer-events: none;
-		z-index: 1;
-	}
+  .printer-card-idle-flash::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(59, 130, 246, 0.2);
+    border-radius: inherit;
+    opacity: 0;
+    animation: card-idle-overlay 3s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 1;
+  }
 
-	@keyframes card-idle-flash {
-		0%,
-		100% {
-			transform: scale(1);
-			box-shadow:
-				0 1px 3px 0 rgb(0 0 0 / 0.1),
-				0 1px 2px -1px rgb(0 0 0 / 0.1);
-		}
-		50% {
-			transform: scale(1.05);
-			box-shadow:
-				0 0 25px rgba(59, 130, 246, 0.4),
-				0 0 50px rgba(59, 130, 246, 0.2);
-		}
-	}
+  @keyframes card-idle-flash {
+    0%,
+    100% {
+      transform: scale(1);
+      box-shadow:
+        0 1px 3px 0 rgb(0 0 0 / 0.1),
+        0 1px 2px -1px rgb(0 0 0 / 0.1);
+    }
+    50% {
+      transform: scale(1.05);
+      box-shadow:
+        0 0 25px rgba(59, 130, 246, 0.4),
+        0 0 50px rgba(59, 130, 246, 0.2);
+    }
+  }
 
-	@keyframes card-idle-overlay {
-		0%,
-		100% {
-			opacity: 0;
-		}
-		50% {
-			opacity: 1;
-		}
-	}
+  @keyframes card-idle-overlay {
+    0%,
+    100% {
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
 
-	.printer-card-error-flash {
-		position: relative;
-		animation: card-error-flash 1.5s ease-in-out infinite;
-	}
+  .printer-card-error-flash {
+    position: relative;
+    animation: card-error-flash 1.5s ease-in-out infinite;
+  }
 
-	.printer-card-error-flash::before {
-		content: '';
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		background: rgba(239, 68, 68, 0.25);
-		border-radius: inherit;
-		opacity: 0;
-		animation: card-error-overlay 1.5s ease-in-out infinite;
-		pointer-events: none;
-		z-index: 1;
-	}
+  .printer-card-error-flash::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(239, 68, 68, 0.25);
+    border-radius: inherit;
+    opacity: 0;
+    animation: card-error-overlay 1.5s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 1;
+  }
 
-	@keyframes card-error-flash {
-		0%,
-		100% {
-			transform: scale(1);
-			box-shadow:
-				0 1px 3px 0 rgb(0 0 0 / 0.1),
-				0 1px 2px -1px rgb(0 0 0 / 0.1);
-		}
-		50% {
-			transform: scale(1.06);
-			box-shadow:
-				0 0 30px rgba(239, 68, 68, 0.5),
-				0 0 60px rgba(239, 68, 68, 0.3);
-		}
-	}
+  @keyframes card-error-flash {
+    0%,
+    100% {
+      transform: scale(1);
+      box-shadow:
+        0 1px 3px 0 rgb(0 0 0 / 0.1),
+        0 1px 2px -1px rgb(0 0 0 / 0.1);
+    }
+    50% {
+      transform: scale(1.06);
+      box-shadow:
+        0 0 30px rgba(239, 68, 68, 0.5),
+        0 0 60px rgba(239, 68, 68, 0.3);
+    }
+  }
 
-	@keyframes card-error-overlay {
-		0%,
-		100% {
-			opacity: 0;
-		}
-		50% {
-			opacity: 1;
-		}
-	}
+  @keyframes card-error-overlay {
+    0%,
+    100% {
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
 
-	/* Ensure card content is above the overlay */
-	.printer-card > * {
-		position: relative;
-		z-index: 2;
-	}
+  /* Ensure card content is above the overlay */
+  .printer-card > * {
+    position: relative;
+    z-index: 2;
+  }
 }

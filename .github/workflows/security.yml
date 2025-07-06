@@ -9,6 +9,11 @@ on:
     # Run security audit every Monday at 9 AM UTC
     - cron: '0 9 * * 1'
 
+permissions:
+  contents: read
+  security-events: write
+  issues: write
+
 jobs:
   audit-frontend:
     name: Frontend Security Audit
@@ -25,22 +30,21 @@ jobs:
           cache: 'yarn'
           cache-dependency-path: frontend-react/yarn.lock
 
+      - name: Cache yarn dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/yarn
+            frontend-react/node_modules
+          key: ${{ runner.os }}-yarn-security-${{ hashFiles('frontend-react/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-security-
+            ${{ runner.os }}-yarn-
+
       - name: Install frontend dependencies
-        shell: bash
         run: |
           cd frontend-react
-          # Retry yarn install up to 3 times to handle temporary registry failures
-          for i in 1 2 3; do
-            if yarn install --frozen-lockfile; then
-              break
-            elif [ $i -eq 3 ]; then
-              echo "Failed to install dependencies after 3 attempts"
-              exit 1
-            else
-              echo "Attempt $i failed, retrying in 10 seconds..."
-              sleep 10
-            fi
-          done
+          yarn install --frozen-lockfile --prefer-offline
 
       - name: Run npm audit
         run: |
@@ -75,6 +79,15 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target/
+          key: ${{ runner.os }}-cargo-security-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install cargo-audit
         run: cargo install cargo-audit --locked

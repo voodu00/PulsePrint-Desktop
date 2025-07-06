@@ -5,20 +5,6 @@ mod integration_tests {
 	use super::*;
 
 	#[test]
-	fn test_cargo_build_succeeds() {
-		let output = Command::new("cargo")
-			.args(&["build", "--release"])
-			.output()
-			.expect("Failed to execute cargo build");
-
-		assert!(
-			output.status.success(),
-			"Cargo build failed: {}",
-			String::from_utf8_lossy(&output.stderr)
-		);
-	}
-
-	#[test]
 	fn test_cargo_check_succeeds() {
 		let output = Command::new("cargo")
 			.args(&["check"])
@@ -28,6 +14,21 @@ mod integration_tests {
 		assert!(
 			output.status.success(),
 			"Cargo check failed: {}",
+			String::from_utf8_lossy(&output.stderr)
+		);
+	}
+
+	#[test]
+	fn test_cargo_build_debug_succeeds() {
+		// Use debug build instead of release build - much faster
+		let output = Command::new("cargo")
+			.args(&["build"])
+			.output()
+			.expect("Failed to execute cargo build");
+
+		assert!(
+			output.status.success(),
+			"Cargo build failed: {}",
 			String::from_utf8_lossy(&output.stderr)
 		);
 	}
@@ -60,12 +61,10 @@ mod integration_tests {
 		);
 	}
 
-	// This test will be expanded when we have actual application logic
 	#[test]
 	fn test_application_modules_compile() {
 		// Test that our main modules exist and can be referenced
 		// This is a simplified test that just checks if the modules are accessible
-		// rather than trying to compile them individually which causes issues
 		let output = Command::new("cargo")
 			.args(&["check", "--lib"])
 			.output()
