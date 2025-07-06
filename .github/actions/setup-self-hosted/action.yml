@@ -1,0 +1,114 @@
+name: 'Setup Self-Hosted Runner'
+description: 'Setup Node.js, Rust, and system dependencies for self-hosted runner'
+
+inputs:
+  node-version:
+    description: 'Node.js version to use'
+    required: false
+    default: '18'
+  install-system-deps:
+    description: 'Whether to install system dependencies'
+    required: false
+    default: 'true'
+  rust-components:
+    description: 'Rust components to install'
+    required: false
+    default: 'rustfmt,clippy'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Check system dependencies
+      shell: bash
+      run: |
+        echo "=== Checking system dependencies ==="
+        missing_deps=()
+
+        # Check for essential build tools
+        if ! command -v gcc &> /dev/null; then
+          missing_deps+=("gcc")
+        fi
+        if ! command -v g++ &> /dev/null; then
+          missing_deps+=("g++")
+        fi
+        if ! command -v make &> /dev/null; then
+          missing_deps+=("make")
+        fi
+        if ! command -v curl &> /dev/null; then
+          missing_deps+=("curl")
+        fi
+        if ! command -v wget &> /dev/null; then
+          missing_deps+=("wget")
+        fi
+
+        # Check for webkit development files
+        if ! pkg-config --exists webkit2gtk-4.1 2>/dev/null; then
+          missing_deps+=("webkit2gtk-4.1-dev")
+        fi
+
+        if [ ${#missing_deps[@]} -eq 0 ]; then
+          echo "✅ All essential system dependencies are available"
+        else
+          echo "❌ Missing dependencies: ${missing_deps[*]}"
+          echo "Please install these packages manually:"
+          echo "sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev"
+        fi
+
+    - name: Install system dependencies (if sudo available)
+      if: inputs.install-system-deps == 'true'
+      shell: bash
+      run: |
+        if sudo -n true 2>/dev/null; then
+          echo "=== Installing system dependencies ==="
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
+        else
+          echo "⚠️  Skipping system dependency installation (no sudo access)"
+          echo "Please ensure the following packages are installed:"
+          echo "- libwebkit2gtk-4.1-dev"
+          echo "- build-essential"
+          echo "- curl, wget, file"
+          echo "- libxdo-dev, libssl-dev"
+          echo "- libayatana-appindicator3-dev, librsvg2-dev"
+          echo "- patchelf"
+        fi
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: 'yarn'
+        cache-dependency-path: frontend-react/yarn.lock
+
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: ${{ inputs.rust-components }}
+
+    - name: Cache Rust dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Verify tools installation
+      shell: bash
+      run: |
+        echo "=== Verifying tool versions ==="
+        echo "Node.js version: $(node --version)"
+        echo "NPM version: $(npm --version)"
+        echo "Yarn version: $(yarn --version)"
+        echo "Rust version: $(rustc --version)"
+        echo "Cargo version: $(cargo --version)"

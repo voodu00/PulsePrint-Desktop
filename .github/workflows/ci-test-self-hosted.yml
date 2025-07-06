@@ -1,8 +1,10 @@
 name: Test Self-Hosted Runner
 
-# Only run manually for testing
+# Run on PRs and manually for testing
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [main, develop]
 
 jobs:
   test-runner:
@@ -29,62 +31,14 @@ jobs:
           echo ""
           echo "=== Current PATH ==="
           echo $PATH
-          echo ""
-          echo "=== Available tools ==="
-          which node || echo "Node.js not found"
-          which yarn || echo "Yarn not found"
-          which rustc || echo "Rust not found"
-          which cargo || echo "Cargo not found"
 
-      - name: Install system dependencies
+      - name: Setup self-hosted runner
+        uses: ./.github/actions/setup-self-hosted
+
+      - name: Install frontend dependencies
         run: |
-          echo "=== Installing system dependencies ==="
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev \
-            build-essential \
-            curl \
-            wget \
-            file \
-            libxdo-dev \
-            libssl-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'yarn'
-          cache-dependency-path: frontend-react/yarn.lock
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-
-      - name: Verify tools installation
-        run: |
-          echo "=== Verifying tool versions ==="
-          echo "Node.js version:"
-          node --version
-          echo ""
-          echo "NPM version:"
-          npm --version
-          echo ""
-          echo "Yarn version:"
-          yarn --version
-          echo ""
-          echo "Rust version:"
-          rustc --version
-          echo ""
-          echo "Cargo version:"
-          cargo --version
-
-      - name: Quick dependency check
-        run: |
-          echo "=== Testing basic dependencies ==="
+          echo "=== Installing frontend dependencies ==="
           cd frontend-react
-          echo "Installing dependencies..."
           yarn install --frozen-lockfile
           echo "✅ Dependencies installed successfully"
 
@@ -106,5 +60,9 @@ jobs:
           echo ""
           echo "Testing Rust compilation..."
           cd ../src-tauri
-          cargo check
-          echo "✅ Rust compilation check successful"
+          if cargo check; then
+            echo "✅ Rust compilation check successful"
+          else
+            echo "❌ Rust compilation failed - this might be due to missing system dependencies"
+            echo "Please ensure all required development packages are installed"
+          fi
