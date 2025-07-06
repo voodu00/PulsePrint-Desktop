@@ -10,12 +10,13 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # Build jobs that produce reusable artifacts
+  # ===================
+
+  # BUILD JOBS (FIRST)
+  # ===================
   build-frontend:
     name: Build Frontend
     runs-on: ubuntu-latest
-    outputs:
-      cache-key: ${{ steps.cache-key.outputs.key }}
 
     steps:
       - name: Checkout code
@@ -27,11 +28,6 @@ jobs:
           node-version: '18'
           cache: 'yarn'
           cache-dependency-path: frontend-react/yarn.lock
-
-      - name: Generate cache key
-        id: cache-key
-        run: |
-          echo "key=frontend-${{ hashFiles('frontend-react/package.json', 'frontend-react/yarn.lock', 'frontend-react/src/**/*') }}" >> $GITHUB_OUTPUT
 
       - name: Install dependencies
         run: |
@@ -50,15 +46,18 @@ jobs:
           path: frontend-react/build/
           retention-days: 1
 
-      - name: Upload node_modules
-        uses: actions/upload-artifact@v4
+      - name: Cache yarn dependencies
+        uses: actions/cache@v4
         with:
-          name: frontend-node-modules
-          path: frontend-react/node_modules/
-          retention-days: 1
+          path: |
+            ~/.cache/yarn
+            frontend-react/node_modules
+          key: ${{ runner.os }}-yarn-${{ hashFiles('frontend-react/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
 
   build-rust:
-    name: Build Rust (Release)
+    name: Build Rust
     runs-on: ubuntu-latest
 
     steps:
@@ -80,6 +79,8 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
 
       - name: Cache Rust dependencies
         uses: actions/cache@v4
@@ -88,7 +89,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             src-tauri/target/
-          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build Rust (release)
         run: |
@@ -98,13 +99,15 @@ jobs:
       - name: Upload Rust build
         uses: actions/upload-artifact@v4
         with:
-          name: rust-build-release
+          name: rust-build
           path: src-tauri/target/release/
           retention-days: 1
 
-  # Quality check jobs that reuse artifacts
-  frontend-checks:
-    name: Frontend Code Quality
+  # ===================
+  # QUALITY JOBS (DEPEND ON BUILDS)
+  # ===================
+  frontend-quality:
+    name: Frontend Quality Checks
     runs-on: ubuntu-latest
     needs: build-frontend
 
@@ -119,11 +122,20 @@ jobs:
           cache: 'yarn'
           cache-dependency-path: frontend-react/yarn.lock
 
-      - name: Download node_modules
-        uses: actions/download-artifact@v4
+      - name: Restore yarn cache
+        uses: actions/cache@v4
         with:
-          name: frontend-node-modules
-          path: frontend-react/node_modules/
+          path: |
+            ~/.cache/yarn
+            frontend-react/node_modules
+          key: ${{ runner.os }}-yarn-${{ hashFiles('frontend-react/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: Install dependencies (if needed)
+        run: |
+          cd frontend-react
+          yarn install --frozen-lockfile --prefer-offline
 
       - name: Run ESLint
         run: |
@@ -152,9 +164,10 @@ jobs:
           flags: frontend
           name: frontend-coverage
 
-  rust-checks:
-    name: Rust Code Quality
+  rust-quality:
+    name: Rust Quality Checks
     runs-on: ubuntu-latest
+    needs: build-rust
 
     steps:
       - name: Checkout code
@@ -202,9 +215,11 @@ jobs:
           cd src-tauri
           cargo test
 
-  # Cross-platform builds that reuse frontend build
+  # ===================
+  # CROSS-PLATFORM BUILDS (DEPEND ON FRONTEND BUILD)
+  # ===================
   cross-platform-build:
-    name: Cross-Platform Build Test
+    name: Cross-Platform Build
     needs: build-frontend
     strategy:
       matrix:
@@ -267,3 +282,110 @@ jobs:
         run: |
           cd src-tauri
           cargo tauri build --no-bundle --config '{"build":{"beforeBuildCommand":""}}'
+
+  # ===================
+  # INTEGRATION & E2E TESTS (DEPEND ON BUILDS)
+  # ===================
+  integration-tests:
+    name: Integration Tests
+    needs: [build-frontend, build-rust]
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: Linux
+          - os: windows-latest
+            name: Windows
+          - os: macos-latest
+            name: macOS
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target/
+          key: ${{ matrix.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run Tauri integration tests
+        run: |
+          cd src-tauri
+          cargo test --test integration_tests
+
+  e2e-tests:
+    name: E2E Tests (Playwright)
+    needs: build-frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+          cache-dependency-path: frontend-react/yarn.lock
+
+      - name: Download frontend build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend-react/build/
+
+      - name: Restore yarn cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/yarn
+            frontend-react/node_modules
+          key: ${{ runner.os }}-yarn-${{ hashFiles('frontend-react/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: Install dependencies (if needed)
+        run: |
+          cd frontend-react
+          yarn install --frozen-lockfile --prefer-offline
+
+      - name: Install Playwright browsers
+        run: |
+          cd frontend-react
+          yarn playwright install --with-deps
+
+      - name: Run E2E tests
+        run: |
+          cd frontend-react
+          yarn test:e2e
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: frontend-react/playwright-report/
+          retention-days: 30

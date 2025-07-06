@@ -7,9 +7,60 @@ on:
     branches: [main, develop]
 
 jobs:
+  # ===================
+  # BUILD FOR ANALYSIS
+  # ===================
+  build-frontend-analysis:
+    name: Build Frontend for Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+          cache-dependency-path: frontend-react/yarn.lock
+
+      - name: Install dependencies
+        run: |
+          cd frontend-react
+          yarn install --frozen-lockfile
+
+      - name: Build application
+        run: |
+          cd frontend-react
+          # Set CI=false to prevent treating warnings as errors for bundle analysis
+          CI=false yarn build
+
+      - name: Upload frontend build
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build-analysis
+          path: frontend-react/build/
+          retention-days: 1
+
+      - name: Cache yarn dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/yarn
+            frontend-react/node_modules
+          key: ${{ runner.os }}-yarn-analysis-${{ hashFiles('frontend-react/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-analysis-
+            ${{ runner.os }}-yarn-
+
+  # ===================
+  # ANALYSIS JOBS (DEPEND ON BUILD)
+  # ===================
   sonarcloud:
     name: SonarCloud Analysis
     runs-on: ubuntu-latest
+    needs: build-frontend-analysis
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
 
     steps:
@@ -25,10 +76,21 @@ jobs:
           cache: 'yarn'
           cache-dependency-path: frontend-react/yarn.lock
 
-      - name: Install frontend dependencies
+      - name: Restore yarn cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/yarn
+            frontend-react/node_modules
+          key: ${{ runner.os }}-yarn-analysis-${{ hashFiles('frontend-react/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-analysis-
+            ${{ runner.os }}-yarn-
+
+      - name: Install dependencies (if needed)
         run: |
           cd frontend-react
-          yarn install --frozen-lockfile
+          yarn install --frozen-lockfile --prefer-offline
 
       - name: Run frontend tests with coverage
         run: |
@@ -68,47 +130,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-  # Build frontend for analysis (shared with other jobs)
-  build-frontend-analysis:
-    name: Build Frontend for Analysis
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'yarn'
-          cache-dependency-path: frontend-react/yarn.lock
-
-      - name: Install dependencies
-        run: |
-          cd frontend-react
-          yarn install --frozen-lockfile
-
-      - name: Build application
-        run: |
-          cd frontend-react
-          # Set CI=false to prevent treating warnings as errors for bundle analysis
-          CI=false yarn build
-
-      - name: Upload frontend build
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-build-analysis
-          path: frontend-react/build/
-          retention-days: 1
-
-      - name: Upload node_modules
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-node-modules-analysis
-          path: frontend-react/node_modules/
-          retention-days: 1
-
   complexity-analysis:
     name: Code Complexity Analysis
     runs-on: ubuntu-latest
@@ -125,11 +146,21 @@ jobs:
           cache: 'yarn'
           cache-dependency-path: frontend-react/yarn.lock
 
-      - name: Download node_modules
-        uses: actions/download-artifact@v4
+      - name: Restore yarn cache
+        uses: actions/cache@v4
         with:
-          name: frontend-node-modules-analysis
-          path: frontend-react/node_modules/
+          path: |
+            ~/.cache/yarn
+            frontend-react/node_modules
+          key: ${{ runner.os }}-yarn-analysis-${{ hashFiles('frontend-react/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-analysis-
+            ${{ runner.os }}-yarn-
+
+      - name: Install dependencies (if needed)
+        run: |
+          cd frontend-react
+          yarn install --frozen-lockfile --prefer-offline
 
       - name: Run ESLint complexity analysis
         run: |
