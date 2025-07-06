@@ -12,32 +12,26 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: self-hosted
-            name: Linux (Self-Hosted)
-          # Commented out for self-hosted runner setup - uncomment when open sourcing
-          # - os: windows-latest
-          #   name: Windows
-          # - os: macos-latest
-          #   name: macOS
+          - os: ubuntu-latest
+            name: Linux
+          - os: windows-latest
+            name: Windows
+          - os: macos-latest
+            name: macOS
     runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup self-hosted runner (Linux only)
-        if: matrix.os == 'self-hosted'
-        uses: ./.github/actions/setup-self-hosted
-
-      - name: Setup Node.js (non-Linux)
-        if: matrix.os != 'self-hosted'
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'yarn'
           cache-dependency-path: frontend-react/yarn.lock
 
-      - name: Install Linux dependencies (non-self-hosted)
+      - name: Install Linux dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
@@ -51,8 +45,7 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev
 
-      - name: Setup Rust (non-Linux)
-        if: matrix.os != 'self-hosted'
+      - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install frontend dependencies
@@ -79,14 +72,34 @@ jobs:
 
   e2e-tests:
     name: E2E Tests (Playwright)
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup self-hosted runner
-        uses: ./.github/actions/setup-self-hosted
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+          cache-dependency-path: frontend-react/yarn.lock
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Install frontend dependencies
         shell: bash
