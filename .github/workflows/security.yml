@@ -9,6 +9,11 @@ on:
     # Run security audit every Monday at 9 AM UTC
     - cron: '0 9 * * 1'
 
+permissions:
+  contents: read
+  security-events: write
+  issues: write
+
 jobs:
   audit-frontend:
     name: Frontend Security Audit

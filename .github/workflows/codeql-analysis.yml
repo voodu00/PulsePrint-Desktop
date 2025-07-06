@@ -20,7 +20,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: ['javascript', 'rust']
+        language: ['javascript-typescript', 'rust']
+        # Note: 'actions' language analysis is not supported in custom workflows
+        # It's only available in GitHub's default setup
 
     steps:
       - name: Checkout repository
@@ -31,16 +33,16 @@ jobs:
         with:
           languages: ${{ matrix.language }}
 
-      - name: Setup Node.js (for JavaScript analysis)
-        if: matrix.language == 'javascript'
+      - name: Setup Node.js (for JavaScript/TypeScript analysis)
+        if: matrix.language == 'javascript-typescript'
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'yarn'
           cache-dependency-path: frontend-react/yarn.lock
 
-      - name: Install frontend dependencies (for JavaScript analysis)
-        if: matrix.language == 'javascript'
+      - name: Install frontend dependencies (for JavaScript/TypeScript analysis)
+        if: matrix.language == 'javascript-typescript'
         run: |
           cd frontend-react
           yarn install --frozen-lockfile
