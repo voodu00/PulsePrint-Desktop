@@ -1,0 +1,49 @@
+name: Test Self-Hosted Runner
+
+# Only run manually for testing
+on:
+  workflow_dispatch:
+
+jobs:
+  test-runner:
+    name: Test Self-Hosted Runner
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: System info
+        run: |
+          echo "=== System Information ==="
+          uname -a
+          echo ""
+          echo "=== Memory Usage ==="
+          free -h
+          echo ""
+          echo "=== CPU Info ==="
+          nproc
+          echo ""
+          echo "=== Disk Usage ==="
+          df -h
+          echo ""
+          echo "=== Node.js Version ==="
+          node --version
+          echo ""
+          echo "=== Rust Version ==="
+          rustc --version
+
+      - name: Quick dependency check
+        run: |
+          echo "=== Testing basic dependencies ==="
+          cd frontend-react
+          echo "Installing dependencies..."
+          yarn install --frozen-lockfile
+          echo "✅ Dependencies installed successfully"
+
+      - name: Resource usage after install
+        run: |
+          echo "=== Resource Usage After Install ==="
+          free -h
+          echo ""
+          ps aux --sort=-%mem | head -10
