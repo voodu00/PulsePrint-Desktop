@@ -92,10 +92,11 @@ jobs:
         include:
           - os: self-hosted
             name: Linux (Self-Hosted)
-          - os: windows-latest
-            name: Windows
-          - os: macos-latest
-            name: macOS
+          # Commented out for self-hosted runner setup - uncomment when open sourcing
+          # - os: windows-latest
+          #   name: Windows
+          # - os: macos-latest
+          #   name: macOS
     runs-on: ${{ matrix.os }}
 
     steps:
