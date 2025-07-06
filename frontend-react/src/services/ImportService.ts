@@ -7,7 +7,9 @@ import {
 	ImportOptions,
 	ImportPreview,
 	ExportOptions,
-	ExportResult
+	ExportResult,
+	RawPrinterData,
+	ParsedJsonData,
 } from '../types/import'
 import { TauriMqttService } from './TauriMqttService'
 import { AddPrinterParams } from '../types/printer'
@@ -72,7 +74,7 @@ export class ImportService {
 			errors.push({
 				message: `Failed to parse ${format.toUpperCase()} file: ${
 					error instanceof Error ? error.message : 'Unknown error'
-				}`
+				}`,
 			})
 		}
 
@@ -90,7 +92,7 @@ export class ImportService {
 			valid: errors.length === 0,
 			errors,
 			warnings,
-			printers
+			printers,
 		}
 	}
 
@@ -102,18 +104,18 @@ export class ImportService {
 		errors: ImportError[]
 	): Promise<ImportablePrinter[]> {
 		try {
-			const data = JSON.parse(content)
+			const data = JSON.parse(content) as ParsedJsonData
 
 			// Handle both array and object with printers array
-			let printersArray: any[]
+			let printersArray: RawPrinterData[]
 			if (Array.isArray(data)) {
-				printersArray = data
+				printersArray = data as RawPrinterData[]
 			} else if (data.printers && Array.isArray(data.printers)) {
-				printersArray = data.printers
+				printersArray = data.printers as RawPrinterData[]
 			} else {
 				errors.push({
 					message:
-						'JSON must contain an array of printers or an object with a "printers" array'
+						'JSON must contain an array of printers or an object with a "printers" array',
 				})
 				return []
 			}
@@ -125,7 +127,7 @@ export class ImportService {
 			errors.push({
 				message: `Invalid JSON: ${
 					error instanceof Error ? error.message : 'Unknown error'
-				}`
+				}`,
 			})
 			return []
 		}
@@ -140,8 +142,8 @@ export class ImportService {
 	): Promise<ImportablePrinter[]> {
 		const lines = content
 			.split('\n')
-			.map((line) => line.trim())
-			.filter((line) => line.length > 0)
+			.map(line => line.trim())
+			.filter(line => line.length > 0)
 
 		if (lines.length === 0) {
 			errors.push({ message: 'CSV file is empty' })
@@ -149,7 +151,7 @@ export class ImportService {
 		}
 
 		// Parse header
-		const header = lines[0].split(',').map((h) => h.trim().replace(/"/g, ''))
+		const header = lines[0].split(',').map(h => h.trim().replace(/"/g, ''))
 		const requiredFields = ['name', 'model', 'ip', 'accessCode', 'serial']
 
 		// Map common field variations
@@ -162,21 +164,21 @@ export class ImportService {
 			serialnumber: 'serial',
 			ip_address: 'ip',
 			'ip-address': 'ip',
-			ipaddress: 'ip'
+			ipaddress: 'ip',
 		}
 
-		const normalizedHeader = header.map((field) => {
+		const normalizedHeader = header.map(field => {
 			const lower = field.toLowerCase()
 			return fieldMap[lower] || lower
 		})
 
 		// Check for required fields
 		const missingFields = requiredFields.filter(
-			(field) => !normalizedHeader.includes(field)
+			field => !normalizedHeader.includes(field)
 		)
 		if (missingFields.length > 0) {
 			errors.push({
-				message: `Missing required CSV columns: ${missingFields.join(', ')}`
+				message: `Missing required CSV columns: ${missingFields.join(', ')}`,
 			})
 			return []
 		}
@@ -184,17 +186,17 @@ export class ImportService {
 		// Parse data rows
 		const printers: ImportablePrinter[] = []
 		for (let i = 1; i < lines.length; i++) {
-			const values = lines[i].split(',').map((v) => v.trim().replace(/"/g, ''))
+			const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''))
 
 			if (values.length !== header.length) {
 				errors.push({
 					line: i + 1,
-					message: `Row has ${values.length} columns, expected ${header.length}`
+					message: `Row has ${values.length} columns, expected ${header.length}`,
 				})
 				continue
 			}
 
-			const printer: any = {}
+			const printer: RawPrinterData = {}
 			normalizedHeader.forEach((field, index) => {
 				printer[field] = values[index]
 			})
@@ -219,7 +221,7 @@ export class ImportService {
 			// Simple YAML parser for basic structures
 			const printers: ImportablePrinter[] = []
 			const lines = content.split('\n')
-			let currentPrinter: any = {}
+			let currentPrinter: RawPrinterData = {}
 			let lineNumber = 0
 
 			for (let i = 0; i < lines.length; i++) {
@@ -275,7 +277,7 @@ export class ImportService {
 			errors.push({
 				message: `YAML parsing error: ${
 					error instanceof Error ? error.message : 'Unknown error'
-				}`
+				}`,
 			})
 			return []
 		}
@@ -305,12 +307,12 @@ export class ImportService {
 		const printers: ImportablePrinter[] = []
 		const blocks = content
 			.split('\n\n')
-			.filter((block) => block.trim().length > 0)
+			.filter(block => block.trim().length > 0)
 
 		for (let blockIndex = 0; blockIndex < blocks.length; blockIndex++) {
 			const block = blocks[blockIndex].trim()
 			const lines = block.split('\n')
-			const printer: any = {}
+			const printer: RawPrinterData = {}
 
 			for (const line of lines) {
 				if (line.includes(':')) {
@@ -335,7 +337,7 @@ export class ImportService {
 	 * Normalize printer data from various formats
 	 */
 	private normalizePrinter(
-		data: any,
+		data: RawPrinterData,
 		lineNumber: number,
 		errors: ImportError[]
 	): ImportablePrinter | null {
@@ -374,14 +376,14 @@ export class ImportService {
 				model: getModel(),
 				ip: getIP(),
 				accessCode: getAccessCode(),
-				serial: getSerial()
+				serial: getSerial(),
 			}
 		} catch (error) {
 			errors.push({
 				line: lineNumber,
 				message: `Failed to normalize printer data: ${
 					error instanceof Error ? error.message : 'Unknown error'
-				}`
+				}`,
 			})
 			return null
 		}
@@ -406,35 +408,35 @@ export class ImportService {
 			errors.push({
 				line: lineNumber,
 				field: 'name',
-				message: 'Printer name is required'
+				message: 'Printer name is required',
 			})
 		}
 		if (!printer.model?.trim()) {
 			errors.push({
 				line: lineNumber,
 				field: 'model',
-				message: 'Printer model is required'
+				message: 'Printer model is required',
 			})
 		}
 		if (!printer.ip?.trim()) {
 			errors.push({
 				line: lineNumber,
 				field: 'ip',
-				message: 'IP address is required'
+				message: 'IP address is required',
 			})
 		}
 		if (!printer.accessCode?.trim()) {
 			errors.push({
 				line: lineNumber,
 				field: 'accessCode',
-				message: 'Access code is required'
+				message: 'Access code is required',
 			})
 		}
 		if (!printer.serial?.trim()) {
 			errors.push({
 				line: lineNumber,
 				field: 'serial',
-				message: 'Serial number is required'
+				message: 'Serial number is required',
 			})
 		}
 
@@ -443,7 +445,7 @@ export class ImportService {
 			errors.push({
 				line: lineNumber,
 				field: 'ip',
-				message: 'Invalid IP address format'
+				message: 'Invalid IP address format',
 			})
 		}
 
@@ -452,7 +454,7 @@ export class ImportService {
 			warnings.push({
 				line: lineNumber,
 				field: 'serial',
-				message: 'Serial number seems too short'
+				message: 'Serial number seems too short',
 			})
 		}
 
@@ -462,7 +464,7 @@ export class ImportService {
 			model: printer.model?.trim() || '',
 			ip: printer.ip?.trim() || '',
 			accessCode: printer.accessCode?.trim() || '',
-			serial: printer.serial?.trim() || ''
+			serial: printer.serial?.trim() || '',
 		}
 
 		return { errors, warnings, printer: cleanedPrinter }
@@ -488,15 +490,15 @@ export class ImportService {
 		const validation = await this.parseFile(content, format)
 
 		const existingPrinters = this.printerService.getPrinters()
-		const existingSerials = existingPrinters.map((p) => p.serial || '')
+		const existingSerials = existingPrinters.map(p => p.serial || '')
 
 		const duplicateSerials = validation.printers
-			.map((p) => p.serial)
+			.map(p => p.serial)
 			.filter((serial, index, arr) => arr.indexOf(serial) !== index)
 
 		const existingMatches = validation.printers
-			.map((p) => p.serial)
-			.filter((serial) => existingSerials.includes(serial))
+			.map(p => p.serial)
+			.filter(serial => existingSerials.includes(serial))
 
 		return {
 			format,
@@ -505,7 +507,7 @@ export class ImportService {
 			invalidRecords: validation.errors.length,
 			duplicateSerials: Array.from(new Set(duplicateSerials)),
 			existingSerials: Array.from(new Set(existingMatches)),
-			sampleData: validation.printers.slice(0, 5) // Show first 5 as sample
+			sampleData: validation.printers.slice(0, 5), // Show first 5 as sample
 		}
 	}
 
@@ -518,7 +520,7 @@ export class ImportService {
 		options: ImportOptions = {
 			skipDuplicates: true,
 			overwriteExisting: false,
-			validateOnly: false
+			validateOnly: false,
 		}
 	): Promise<ImportResult> {
 		const format = this.detectFormat(filename, content)
@@ -531,7 +533,7 @@ export class ImportService {
 				skipped: 0,
 				errors: validation.errors,
 				printers: [],
-				validateOnly: options.validateOnly
+				validateOnly: options.validateOnly,
 			}
 		}
 
@@ -542,12 +544,12 @@ export class ImportService {
 				skipped: 0,
 				errors: validation.errors,
 				printers: validation.printers,
-				validateOnly: true
+				validateOnly: true,
 			}
 		}
 
 		const existingPrinters = this.printerService.getPrinters()
-		const existingSerials = existingPrinters.map((p) => p.serial || '')
+		const existingSerials = existingPrinters.map(p => p.serial || '')
 
 		let imported = 0
 		let skipped = 0
@@ -568,13 +570,14 @@ export class ImportService {
 					model: printer.model,
 					ip: printer.ip,
 					accessCode: printer.accessCode,
-					serial: printer.serial
+					serial: printer.serial,
 				}
 
 				await this.printerService.addPrinter(params)
 				imported++
 				successfulPrinters.push(printer)
 			} catch (error) {
+				// eslint-disable-next-line no-console
 				console.error('Import error for printer:', printer.name, error)
 
 				let errorMessage = 'Unknown error'
@@ -588,7 +591,7 @@ export class ImportService {
 
 				errors.push({
 					message: `Failed to import printer "${printer.name}": ${errorMessage}`,
-					data: printer
+					data: printer,
 				})
 			}
 		}
@@ -599,7 +602,7 @@ export class ImportService {
 			skipped,
 			errors,
 			printers: successfulPrinters,
-			validateOnly: false
+			validateOnly: false,
 		}
 	}
 
@@ -609,15 +612,15 @@ export class ImportService {
 	async exportPrinters(options: ExportOptions): Promise<ExportResult> {
 		try {
 			const printers = this.printerService.getPrinters()
-			const exportData = printers.map((printer) => ({
+			const exportData = printers.map(printer => ({
 				name: printer.name,
 				model: printer.model || '',
 				ip: printer.ip || '',
 				accessCode: printer.accessCode || '',
 				serial: printer.serial || '',
 				...(options.includeTimestamps && {
-					lastUpdate: printer.lastUpdate.toISOString()
-				})
+					lastUpdate: printer.lastUpdate.toISOString(),
+				}),
 			}))
 
 			let data: string
@@ -648,35 +651,35 @@ export class ImportService {
 			return {
 				success: true,
 				filename,
-				data
+				data,
 			}
 		} catch (error) {
 			return {
 				success: false,
 				filename: '',
 				data: '',
-				error: error instanceof Error ? error.message : 'Unknown error'
+				error: error instanceof Error ? error.message : 'Unknown error',
 			}
 		}
 	}
 
-	private exportToCSV(data: any[]): string {
+	private exportToCSV(data: Record<string, string>[]): string {
 		if (data.length === 0) return ''
 
 		const headers = Object.keys(data[0])
 		const csvData = [
 			headers.join(','),
-			...data.map((row) =>
-				headers.map((header) => `"${row[header] || ''}"`).join(',')
-			)
+			...data.map(row =>
+				headers.map(header => `"${row[header] || ''}"`).join(',')
+			),
 		]
 
 		return csvData.join('\n')
 	}
 
-	private exportToYAML(data: any[]): string {
+	private exportToYAML(data: Record<string, string>[]): string {
 		return data
-			.map((printer) =>
+			.map(printer =>
 				Object.entries(printer)
 					.map(([key, value]) => `${key}: ${value}`)
 					.join('\n')
@@ -684,9 +687,9 @@ export class ImportService {
 			.join('\n\n')
 	}
 
-	private exportToTXT(data: any[]): string {
+	private exportToTXT(data: Record<string, string>[]): string {
 		return data
-			.map((printer) =>
+			.map(printer =>
 				Object.entries(printer)
 					.map(([key, value]) => `${key}: ${value}`)
 					.join('\n')

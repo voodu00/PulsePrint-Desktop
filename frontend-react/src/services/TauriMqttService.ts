@@ -1,12 +1,13 @@
 import { invoke } from '@tauri-apps/api/core'
-import { listen } from '@tauri-apps/api/event'
 import {
 	Printer,
 	PrinterServiceEvent,
-	AddPrinterParams
+	PrinterStatus,
+	AddPrinterParams,
 } from '../types/printer'
+import { TauriPrinterData } from '../types/import'
 
-export interface TauriPrinterConfig {
+export interface TauriPrinterConfig extends TauriPrinterData {
 	id: string
 	name: string
 	model: string
@@ -26,40 +27,116 @@ export class TauriMqttService {
 
 	constructor() {
 		this.setupEventListeners()
-		this.loadPrintersFromStorage()
 	}
 
 	private async setupEventListeners() {
-		// Listen for printer updates from Tauri backend
-		await listen<Printer>('printer-update', (event) => {
-			const printer = this.convertTauriPrinterToFrontend(event.payload)
-			this.printers.set(printer.id, printer)
+		// Set up Tauri event listeners for real-time MQTT updates from actual printers
+		try {
+			const { listen } = await import('@tauri-apps/api/event')
 
-			// Save updated printer state to localStorage
-			this.savePrintersToStorage()
+			// Listen for printer status updates from the Rust backend
+			await listen('printer-update', event => {
+				const printerData = event.payload as TauriPrinterData
+				const printer = this.convertTauriPrinterToFrontend(printerData)
 
-			this.notifyListeners({
-				type: 'updated',
-				data: Array.from(this.printers.values())
+				// Update local state
+				this.printers.set(printer.id, printer)
+
+				// Notify listeners with updated printer data
+				this.notifyListeners({
+					type: 'updated',
+					data: Array.from(this.printers.values()),
+				})
 			})
-		})
 
-		// Listen for printer removal
-		await listen<string>('printer-removed', (event) => {
-			const printerId = event.payload
-			this.printers.delete(printerId)
+			// Listen for printer removal events
+			await listen('printer-removed', event => {
+				const printerId = event.payload as string
+				const printer = this.printers.get(printerId)
 
-			// Save updated printer state to localStorage
-			this.savePrintersToStorage()
+				if (printer) {
+					this.printers.delete(printerId)
 
-			this.notifyListeners({
-				type: 'updated',
-				data: Array.from(this.printers.values())
+					this.notifyListeners({
+						type: 'printer_removed',
+						data: printer,
+					})
+
+					this.notifyListeners({
+						type: 'updated',
+						data: Array.from(this.printers.values()),
+					})
+				}
 			})
-		})
+		} catch (error) {
+			// eslint-disable-next-line no-console
+			console.error('Failed to setup Tauri event listeners:', error)
+		}
 	}
 
-	private convertTauriPrinterToFrontend(tauriPrinter: any): Printer {
+	private convertTauriPrinterToFrontend(
+		tauriPrinter: TauriPrinterData
+	): Printer {
+		// Map Rust status enum to frontend status
+		const mapStatus = (rustStatus?: string): PrinterStatus => {
+			if (!rustStatus) return 'offline'
+
+			switch (rustStatus.toLowerCase()) {
+				case 'idle':
+					return 'idle'
+				case 'printing':
+					return 'printing'
+				case 'paused':
+					return 'paused'
+				case 'error':
+					return 'error'
+				case 'connecting':
+					return 'connecting'
+				case 'offline':
+				default:
+					return 'offline'
+			}
+		}
+
+		// Convert print job if present
+		const convertPrintJob = (printData?: any) => {
+			if (!printData) return null
+
+			return {
+				progress: printData.progress || 0,
+				fileName: printData.file_name || 'Unknown',
+				layerCurrent: printData.layer_current || 0,
+				layerTotal: printData.layer_total || 0,
+				timeRemaining: printData.time_remaining || 0,
+				estimatedTotalTime: printData.estimated_total_time || 0,
+			}
+		}
+
+		// Convert filament info if present
+		const convertFilamentInfo = (filamentData?: any) => {
+			if (!filamentData) return null
+
+			return {
+				type: filamentData.type || 'Unknown',
+				color: filamentData.color || 'Unknown',
+				remaining: filamentData.remaining || 0,
+			}
+		}
+
+		// Convert error info if present
+		const convertErrorInfo = (errorData?: any) => {
+			if (!errorData) return null
+
+			return {
+				printError: errorData.print_error || 0,
+				errorCode: errorData.error_code || 0,
+				stage: errorData.stage || 0,
+				lifecycle: errorData.lifecycle || 'unknown',
+				gcodeState: errorData.gcode_state || 'unknown',
+				message: errorData.message || 'Unknown error',
+			}
+		}
+
 		return {
 			id: tauriPrinter.id,
 			name: tauriPrinter.name,
@@ -67,40 +144,18 @@ export class TauriMqttService {
 			ip: tauriPrinter.ip,
 			accessCode: tauriPrinter.access_code,
 			serial: tauriPrinter.serial,
-			status: tauriPrinter.status,
+			status: mapStatus(tauriPrinter.status),
 			temperatures: {
-				nozzle: tauriPrinter.temperatures.nozzle,
-				bed: tauriPrinter.temperatures.bed,
-				chamber: tauriPrinter.temperatures.chamber
+				nozzle: tauriPrinter.temperatures?.nozzle || 0,
+				bed: tauriPrinter.temperatures?.bed || 0,
+				chamber: tauriPrinter.temperatures?.chamber || 0,
 			},
-			print: tauriPrinter.print
-				? {
-						progress: tauriPrinter.print.progress,
-						fileName: tauriPrinter.print.file_name,
-						layerCurrent: tauriPrinter.print.layer_current,
-						layerTotal: tauriPrinter.print.layer_total,
-						timeRemaining: tauriPrinter.print.time_remaining,
-						estimatedTotalTime: tauriPrinter.print.estimated_total_time
-				  }
-				: null,
-			filament: tauriPrinter.filament
-				? {
-						type: tauriPrinter.filament.type,
-						color: tauriPrinter.filament.color,
-						remaining: tauriPrinter.filament.remaining
-				  }
-				: null,
-			error: tauriPrinter.error
-				? {
-						printError: tauriPrinter.error.print_error,
-						errorCode: tauriPrinter.error.error_code,
-						stage: tauriPrinter.error.stage,
-						lifecycle: tauriPrinter.error.lifecycle,
-						gcodeState: tauriPrinter.error.gcode_state,
-						message: tauriPrinter.error.message
-				  }
-				: null,
-			lastUpdate: new Date(tauriPrinter.last_update)
+			print: convertPrintJob(tauriPrinter.print),
+			filament: convertFilamentInfo(tauriPrinter.filament),
+			error: convertErrorInfo(tauriPrinter.error),
+			lastUpdate: tauriPrinter.last_update
+				? new Date(tauriPrinter.last_update)
+				: new Date(),
 		}
 	}
 
@@ -108,42 +163,27 @@ export class TauriMqttService {
 		params: AddPrinterParams
 	): TauriPrinterConfig {
 		return {
-			id: `printer-${Date.now()}`,
+			id: params.serial, // Use serial as ID for uniqueness
 			name: params.name,
 			model: params.model || 'Unknown Model',
 			ip: params.ip,
 			access_code: params.accessCode,
-			serial: params.serial
+			serial: params.serial,
 		}
 	}
 
-	// localStorage methods for persistent printer state
 	private loadPrintersFromStorage(): void {
 		try {
 			const stored = localStorage.getItem(TauriMqttService.STORAGE_KEY)
 			if (stored) {
-				const printerConfigs = JSON.parse(stored)
-				// Restore printer configurations and reconnect
-				printerConfigs.forEach((config: TauriPrinterConfig) => {
-					// Create a basic printer object from stored config
-					const printer: Printer = {
-						id: config.id,
-						name: config.name,
-						model: config.model,
-						ip: config.ip,
-						accessCode: config.access_code,
-						serial: config.serial,
-						status: 'offline',
-						temperatures: { nozzle: 0, bed: 0, chamber: 0 },
-						print: null,
-						filament: null,
-						error: null,
-						lastUpdate: new Date()
-					}
-					this.printers.set(config.id, printer)
-				})
+				const configs = JSON.parse(stored) as TauriPrinterConfig[]
+				for (const config of configs) {
+					const printer = this.convertTauriPrinterToFrontend(config)
+					this.printers.set(printer.id, printer)
+				}
 			}
 		} catch (error) {
+			// eslint-disable-next-line no-console
 			console.error('Failed to load printers from localStorage:', error)
 		}
 	}
@@ -151,13 +191,13 @@ export class TauriMqttService {
 	private savePrintersToStorage(): void {
 		try {
 			const printerConfigs = Array.from(this.printers.values()).map(
-				(printer) => ({
+				printer => ({
 					id: printer.id,
 					name: printer.name,
 					model: printer.model,
 					ip: printer.ip,
 					access_code: printer.accessCode,
-					serial: printer.serial
+					serial: printer.serial,
 				})
 			)
 			localStorage.setItem(
@@ -165,6 +205,7 @@ export class TauriMqttService {
 				JSON.stringify(printerConfigs)
 			)
 		} catch (error) {
+			// eslint-disable-next-line no-console
 			console.error('Failed to save printers to localStorage:', error)
 		}
 	}
@@ -172,30 +213,67 @@ export class TauriMqttService {
 	async addPrinter(params: AddPrinterParams): Promise<void> {
 		// Check if printer with same serial already exists
 		const existingPrinter = Array.from(this.printers.values()).find(
-			(p) => p.serial === params.serial
+			p => p.serial === params.serial
 		)
 
 		if (existingPrinter) {
-			console.log(
-				`Printer with serial ${params.serial} already exists, skipping duplicate`
-			)
+			// Printer already exists, skip duplicate
 			return
 		}
 
 		const config = this.convertFrontendToTauriConfig(params)
 		await invoke('add_printer', { config })
 
+		// Create printer object for local state
+		const newPrinter = this.convertTauriPrinterToFrontend(config)
+
+		// Update local state
+		this.printers.set(newPrinter.id, newPrinter)
+
 		// Save to localStorage immediately
 		this.savePrintersToStorage()
+
+		// Notify listeners
+		this.notifyListeners({
+			type: 'printer_added',
+			data: newPrinter,
+		})
+
+		this.notifyListeners({
+			type: 'updated',
+			data: Array.from(this.printers.values()),
+		})
 	}
 
 	async removePrinter(printerId: string): Promise<void> {
+		// Get printer before removing
+		const printer = this.printers.get(printerId)
+
 		await invoke('remove_printer', { printerId })
+
+		// Update local state
+		this.printers.delete(printerId)
+
+		// Save to localStorage
+		this.savePrintersToStorage()
+
+		// Notify listeners if printer was found
+		if (printer) {
+			this.notifyListeners({
+				type: 'printer_removed',
+				data: printer,
+			})
+
+			this.notifyListeners({
+				type: 'updated',
+				data: Array.from(this.printers.values()),
+			})
+		}
 	}
 
 	async getAllPrinters(): Promise<Printer[]> {
-		const tauriPrinters = await invoke<any[]>('get_all_printers')
-		return tauriPrinters.map((printer) =>
+		const tauriPrinters = await invoke<TauriPrinterData[]>('get_all_printers')
+		return tauriPrinters.map(printer =>
 			this.convertTauriPrinterToFrontend(printer)
 		)
 	}
@@ -232,20 +310,21 @@ export class TauriMqttService {
 	}
 
 	private notifyListeners(event: PrinterServiceEvent): void {
-		this.listeners.forEach((listener) => listener(event))
+		this.listeners.forEach(listener => listener(event))
 	}
 
 	// Initialize the service
 	async initialize(): Promise<void> {
 		try {
 			// Get current printers from backend (this is the source of truth)
-			const backendPrinters = await invoke<any[]>('get_all_printers')
+			const backendPrinters =
+				await invoke<TauriPrinterData[]>('get_all_printers')
 
 			// Clear local state and start fresh
 			this.printers.clear()
 
 			// Deduplicate printers by serial number (keep the first occurrence)
-			const uniquePrinters = new Map<string, any>()
+			const uniquePrinters = new Map<string, TauriPrinterData>()
 			for (const tauriPrinter of backendPrinters) {
 				if (!uniquePrinters.has(tauriPrinter.serial)) {
 					uniquePrinters.set(tauriPrinter.serial, tauriPrinter)
@@ -254,17 +333,14 @@ export class TauriMqttService {
 
 			// If we found duplicates, clean them up
 			if (uniquePrinters.size < backendPrinters.length) {
-				console.log(
-					`Found ${
-						backendPrinters.length - uniquePrinters.size
-					} duplicate printers, cleaning up...`
-				)
+				// Found duplicates, cleaning up...
 
 				// Remove all printers from backend
 				for (const tauriPrinter of backendPrinters) {
 					try {
 						await invoke('remove_printer', { printer_id: tauriPrinter.id })
 					} catch (error) {
+						// eslint-disable-next-line no-console
 						console.error(
 							`Failed to remove duplicate printer ${tauriPrinter.id}:`,
 							error
@@ -280,6 +356,7 @@ export class TauriMqttService {
 						const printer = this.convertTauriPrinterToFrontend(tauriPrinter)
 						this.printers.set(printer.id, printer)
 					} catch (error) {
+						// eslint-disable-next-line no-console
 						console.error(
 							`Failed to re-add printer ${tauriPrinter.name}:`,
 							error
@@ -297,15 +374,14 @@ export class TauriMqttService {
 			// Update localStorage to match backend state
 			this.savePrintersToStorage()
 
-			console.log(
-				`Initialized TauriMqttService with ${this.printers.size} printers from backend`
-			)
+			// Initialized successfully
 
 			this.notifyListeners({
 				type: 'initialized',
-				data: Array.from(this.printers.values())
+				data: Array.from(this.printers.values()),
 			})
 		} catch (error) {
+			// eslint-disable-next-line no-console
 			console.error('Failed to initialize TauriMqttService:', error)
 
 			// Fallback to localStorage if backend fails
@@ -313,7 +389,7 @@ export class TauriMqttService {
 
 			this.notifyListeners({
 				type: 'initialized',
-				data: Array.from(this.printers.values())
+				data: Array.from(this.printers.values()),
 			})
 		}
 	}
@@ -332,10 +408,10 @@ export class TauriMqttService {
 		const printers = Array.from(this.printers.values())
 		return {
 			total: printers.length,
-			online: printers.filter((p) => p.status !== 'offline').length,
-			printing: printers.filter((p) => p.status === 'printing').length,
-			idle: printers.filter((p) => p.status === 'idle').length,
-			error: printers.filter((p) => p.status === 'error').length
+			online: printers.filter(p => p.status !== 'offline').length,
+			printing: printers.filter(p => p.status === 'printing').length,
+			idle: printers.filter(p => p.status === 'idle').length,
+			error: printers.filter(p => p.status === 'error').length,
 		}
 	}
 

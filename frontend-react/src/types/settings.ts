@@ -19,5 +19,5 @@ export const defaultSettings: SettingsState = {
 	refreshInterval: 30,
 	showTemperatures: true,
 	showProgress: true,
-	compactView: false
+	compactView: false,
 }

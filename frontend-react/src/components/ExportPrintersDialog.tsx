@@ -4,7 +4,7 @@ import {
 	DialogContent,
 	DialogHeader,
 	DialogTitle,
-	DialogFooter
+	DialogFooter,
 } from './ui/dialog'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
@@ -17,11 +17,16 @@ import {
 	XCircle,
 	Loader2,
 	Copy,
-	Save
+	Save,
 } from 'lucide-react'
 import { ImportService } from '../services/ImportService'
 import { TauriMqttService } from '../services/TauriMqttService'
 import { ExportOptions, ExportResult, ImportFileFormat } from '../types/import'
+import {
+	getFormatIcon,
+	getFormatColor,
+	getFormatDescription,
+} from '../utils/formatUtils'
 
 interface ExportPrintersDialogProps {
 	isOpen: boolean
@@ -32,12 +37,12 @@ interface ExportPrintersDialogProps {
 export const ExportPrintersDialog: React.FC<ExportPrintersDialogProps> = ({
 	isOpen,
 	onClose,
-	printerService
+	printerService,
 }) => {
 	const [exportOptions, setExportOptions] = useState<ExportOptions>({
 		format: 'json',
 		includeTimestamps: false,
-		prettyFormat: true
+		prettyFormat: true,
 	})
 	const [exportResult, setExportResult] = useState<ExportResult | null>(null)
 	const [isLoading, setIsLoading] = useState(false)
@@ -90,6 +95,7 @@ export const ExportPrintersDialog: React.FC<ExportPrintersDialogProps> = ({
 			setCopied(true)
 			setTimeout(() => setCopied(false), 2000)
 		} catch (err) {
+			// eslint-disable-next-line no-console
 			console.error('Failed to copy to clipboard:', err)
 		}
 	}, [exportResult])
@@ -102,57 +108,8 @@ export const ExportPrintersDialog: React.FC<ExportPrintersDialogProps> = ({
 		onClose()
 	}, [onClose])
 
-	const getFormatIcon = (format: ImportFileFormat) => {
-		switch (format) {
-			case 'json':
-				return '{ }'
-			case 'csv':
-				return 'CSV'
-			case 'yaml':
-				return 'YAML'
-			case 'txt':
-				return 'TXT'
-			default:
-				return '?'
-		}
-	}
-
-	const getFormatColor = (format: ImportFileFormat) => {
-		switch (format) {
-			case 'json':
-				return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-			case 'csv':
-				return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-			case 'yaml':
-				return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
-			case 'txt':
-				return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-			default:
-				return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-		}
-	}
-
-	const getFormatDescription = (format: ImportFileFormat) => {
-		switch (format) {
-			case 'json':
-				return 'JavaScript Object Notation - structured data format'
-			case 'csv':
-				return 'Comma-Separated Values - spreadsheet compatible'
-			case 'yaml':
-				return "YAML Ain't Markup Language - human-readable format"
-			case 'txt':
-				return 'Plain text - simple key-value pairs'
-			default:
-				return 'Unknown format'
-		}
-	}
-
 	return (
-		<Dialog
-			open={isOpen}
-			onOpenChange={handleClose}
-			className="max-w-2xl"
-		>
+		<Dialog open={isOpen} onOpenChange={handleClose} className="max-w-2xl">
 			<DialogContent className="p-6">
 				<DialogHeader>
 					<DialogTitle>Export Printer Settings</DialogTitle>
@@ -203,11 +160,11 @@ export const ExportPrintersDialog: React.FC<ExportPrintersDialogProps> = ({
 										<div className="grid grid-cols-2 gap-2">
 											{(
 												['json', 'csv', 'yaml', 'txt'] as ImportFileFormat[]
-											).map((format) => (
+											).map(format => (
 												<button
 													key={format}
 													onClick={() =>
-														setExportOptions((prev) => ({ ...prev, format }))
+														setExportOptions(prev => ({ ...prev, format }))
 													}
 													className={`p-3 rounded-lg border text-left transition-colors ${
 														exportOptions.format === format
@@ -242,10 +199,10 @@ export const ExportPrintersDialog: React.FC<ExportPrintersDialogProps> = ({
 										</div>
 										<Switch
 											checked={exportOptions.includeTimestamps}
-											onCheckedChange={(checked) =>
-												setExportOptions((prev) => ({
+											onCheckedChange={checked =>
+												setExportOptions(prev => ({
 													...prev,
-													includeTimestamps: checked
+													includeTimestamps: checked,
 												}))
 											}
 										/>
@@ -260,10 +217,10 @@ export const ExportPrintersDialog: React.FC<ExportPrintersDialogProps> = ({
 										</div>
 										<Switch
 											checked={exportOptions.prettyFormat}
-											onCheckedChange={(checked) =>
-												setExportOptions((prev) => ({
+											onCheckedChange={checked =>
+												setExportOptions(prev => ({
 													...prev,
-													prettyFormat: checked
+													prettyFormat: checked,
 												}))
 											}
 											disabled={exportOptions.format !== 'json'}
@@ -273,10 +230,7 @@ export const ExportPrintersDialog: React.FC<ExportPrintersDialogProps> = ({
 							</div>
 
 							<DialogFooter>
-								<Button
-									variant="outline"
-									onClick={handleClose}
-								>
+								<Button variant="outline" onClick={handleClose}>
 									Cancel
 								</Button>
 								<Button
@@ -359,17 +313,11 @@ export const ExportPrintersDialog: React.FC<ExportPrintersDialogProps> = ({
 									</Card>
 
 									<div className="flex gap-2">
-										<Button
-											onClick={handleDownload}
-											className="flex-1"
-										>
+										<Button onClick={handleDownload} className="flex-1">
 											<Save className="w-4 h-4 mr-2" />
 											Download File
 										</Button>
-										<Button
-											variant="outline"
-											onClick={handleCopy}
-										>
+										<Button variant="outline" onClick={handleCopy}>
 											{copied ? (
 												<CheckCircle className="w-4 h-4 mr-2" />
 											) : (
@@ -382,10 +330,7 @@ export const ExportPrintersDialog: React.FC<ExportPrintersDialogProps> = ({
 							)}
 
 							<DialogFooter>
-								<Button
-									variant="outline"
-									onClick={handleClose}
-								>
+								<Button variant="outline" onClick={handleClose}>
 									Close
 								</Button>
 							</DialogFooter>

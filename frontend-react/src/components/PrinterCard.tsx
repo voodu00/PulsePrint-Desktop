@@ -10,10 +10,15 @@ import {
 	Square,
 	Wifi,
 	WifiOff,
-	Loader2
+	Loader2,
+	Info,
 } from 'lucide-react'
 import { Printer as PrinterType } from '../types/printer'
 import { formatTime } from '../utils/formatTime'
+import {
+	calculateProgress,
+	getProgressSourceDescription,
+} from '../utils/progressCalculation'
 import { useSettings } from '../contexts/SettingsContext'
 
 interface PrinterCardProps {
@@ -27,7 +32,7 @@ const PrinterCard: React.FC<PrinterCardProps> = ({
 	printer,
 	onPause,
 	onResume,
-	onStop
+	onStop,
 }) => {
 	const { settings } = useSettings()
 	const isOnline = printer.status !== 'offline'
@@ -50,12 +55,7 @@ const PrinterCard: React.FC<PrinterCardProps> = ({
 			case 'offline':
 				return <WifiOff {...iconProps} />
 			case 'connecting':
-				return (
-					<Loader2
-						{...iconProps}
-						className="w-3 h-3 mr-1 animate-spin"
-					/>
-				)
+				return <Loader2 {...iconProps} className="w-3 h-3 mr-1 animate-spin" />
 			default:
 				return <Wifi {...iconProps} />
 		}
@@ -86,8 +86,8 @@ const PrinterCard: React.FC<PrinterCardProps> = ({
 									printer.temperatures.nozzle > 150
 										? 'temperature-hot'
 										: printer.temperatures.nozzle > 50
-										? 'temperature-warm'
-										: ''
+											? 'temperature-warm'
+											: ''
 								}`}
 							>
 								{Math.round(printer.temperatures.nozzle)}°C
@@ -102,8 +102,8 @@ const PrinterCard: React.FC<PrinterCardProps> = ({
 									printer.temperatures.bed > 80
 										? 'temperature-hot'
 										: printer.temperatures.bed > 40
-										? 'temperature-warm'
-										: ''
+											? 'temperature-warm'
+											: ''
 								}`}
 							>
 								{Math.round(printer.temperatures.bed)}°C
@@ -131,19 +131,33 @@ const PrinterCard: React.FC<PrinterCardProps> = ({
 		if (!settings.showProgress) return null
 		if (!(isPrinting || isPaused) || !printer.print) return null
 
+		const progressCalc = calculateProgress(printer.print)
+		const showProgressSource =
+			progressCalc.source !== 'direct' && progressCalc.progress > 0
+
 		return (
 			<>
 				<div className="space-y-2">
 					<div className="flex justify-between text-sm">
-						<span className="text-muted-foreground">Progress</span>
+						<div className="flex items-center gap-1">
+							<span className="text-muted-foreground">Progress</span>
+							{showProgressSource && (
+								<div className="group relative">
+									<Info className="w-3 h-3 text-muted-foreground cursor-help" />
+									<div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-gray-800 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+										{getProgressSourceDescription(progressCalc.source)}
+									</div>
+								</div>
+							)}
+						</div>
 						<span className="font-medium">
-							{Math.round(printer.print.progress)}%
+							{Math.round(progressCalc.progress)}%
 						</span>
 					</div>
 					<div className="progress">
 						<div
 							className="progress-bar"
-							style={{ width: `${Math.round(printer.print.progress)}%` }}
+							style={{ width: `${Math.round(progressCalc.progress)}%` }}
 						/>
 					</div>
 					{printer.print.fileName && (

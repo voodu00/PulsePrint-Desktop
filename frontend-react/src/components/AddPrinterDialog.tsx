@@ -17,14 +17,14 @@ interface AddPrinterDialogProps {
 export const AddPrinterDialog: React.FC<AddPrinterDialogProps> = ({
 	isOpen,
 	onClose,
-	onAddPrinter
+	onAddPrinter,
 }) => {
 	const [formData, setFormData] = useState({
 		name: '',
 		model: 'X1C',
 		ip: '',
 		accessCode: '',
-		serial: ''
+		serial: '',
 	})
 
 	const handleSubmit = (e: React.FormEvent) => {
@@ -39,7 +39,7 @@ export const AddPrinterDialog: React.FC<AddPrinterDialogProps> = ({
 	) => {
 		setFormData({
 			...formData,
-			[e.target.name]: e.target.value
+			[e.target.name]: e.target.value,
 		})
 	}
 
@@ -52,10 +52,7 @@ export const AddPrinterDialog: React.FC<AddPrinterDialogProps> = ({
 					<CardTitle>Add Bambu Lab Printer</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<form
-						onSubmit={handleSubmit}
-						className="space-y-4"
-					>
+					<form onSubmit={handleSubmit} className="space-y-4">
 						<div>
 							<label
 								htmlFor="name"
@@ -164,10 +161,7 @@ export const AddPrinterDialog: React.FC<AddPrinterDialogProps> = ({
 							>
 								Cancel
 							</Button>
-							<Button
-								type="submit"
-								className="flex-1"
-							>
+							<Button type="submit" className="flex-1">
 								Add Printer
 							</Button>
 						</div>

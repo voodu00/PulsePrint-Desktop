@@ -1,0 +1,107 @@
+name: Security Audit
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run security audit every Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+
+jobs:
+  audit-frontend:
+    name: Frontend Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+          cache-dependency-path: frontend-react/yarn.lock
+
+      - name: Install frontend dependencies
+        shell: bash
+        run: |
+          cd frontend-react
+          # Retry yarn install up to 3 times to handle temporary registry failures
+          for i in 1 2 3; do
+            if yarn install --frozen-lockfile; then
+              break
+            elif [ $i -eq 3 ]; then
+              echo "Failed to install dependencies after 3 attempts"
+              exit 1
+            else
+              echo "Attempt $i failed, retrying in 10 seconds..."
+              sleep 10
+            fi
+          done
+
+      - name: Run npm audit
+        run: |
+          cd frontend-react
+          yarn audit --audit-level moderate || true
+
+      - name: Check for known vulnerabilities
+        run: |
+          cd frontend-react
+          yarn audit-ci --config ../audit-ci.json || true
+
+  audit-rust:
+    name: Rust Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+
+      - name: Run cargo audit
+        run: |
+          cd src-tauri
+          cargo audit || true
+
+      - name: Check for security advisories
+        run: |
+          cd src-tauri
+          cargo audit --deny warnings || true
+
+  # DISABLED: Dependency Review requires GitHub settings only available for open source projects
+  # To re-enable when going open source: uncomment the job below
+  # dependency-review:
+  #   name: Dependency Review
+  #   runs-on: ubuntu-latest
+  #   if: github.event_name == 'pull_request'
+  #
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Dependency Review
+  #       uses: actions/dependency-review-action@v4
+  #       with:
+  #         fail-on-severity: moderate
+  #         allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC

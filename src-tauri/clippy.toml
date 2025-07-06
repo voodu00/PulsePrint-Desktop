@@ -1,0 +1,30 @@
+# Clippy configuration for PrintPulse Desktop
+# https://doc.rust-lang.org/clippy/configuration.html
+
+# Cognitive complexity threshold
+cognitive-complexity-threshold = 30
+
+# Maximum number of lines a function can have
+too-many-lines-threshold = 100
+
+# Maximum number of arguments a function can have
+too-many-arguments-threshold = 7
+
+# Maximum number of single char bindings in scope
+single-char-binding-names-threshold = 4
+
+# Maximum size of types to avoid performance issues
+type-complexity-threshold = 250
+
+# Maximum number of variants a enum can have
+enum-variant-name-threshold = 3
+
+# Minimum number of enum variants for exhaustive matching
+enum-variant-size-threshold = 200
+
+# Avoid false positives
+avoid-breaking-exported-api = true
+
+# Allow certain patterns
+allow-expect-in-tests = true
+allow-unwrap-in-tests = true 

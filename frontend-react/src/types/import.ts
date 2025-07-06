@@ -19,7 +19,7 @@ export interface ImportError {
 	line?: number
 	field?: string
 	message: string
-	data?: any
+	data?: ImportablePrinter
 }
 
 export interface ImportValidationResult {
@@ -59,4 +59,80 @@ export interface ExportResult {
 	filename: string
 	data: string
 	error?: string
+}
+
+// Raw printer data interfaces to replace 'any' types
+export interface RawPrinterData {
+	name?: string
+	Name?: string
+	printer_name?: string
+	printerName?: string
+	model?: string
+	Model?: string
+	printer_model?: string
+	printerModel?: string
+	ip?: string
+	IP?: string
+	ip_address?: string
+	ipAddress?: string
+	address?: string
+	accessCode?: string
+	access_code?: string
+	accesscode?: string
+	AccessCode?: string
+	serial?: string
+	Serial?: string
+	serial_number?: string
+	serialNumber?: string
+	[key: string]: unknown
+}
+
+export interface ParsedJsonData {
+	printers?: ImportablePrinter[]
+	[key: string]: unknown
+}
+
+export interface TauriPrinterData {
+	id: string
+	name: string
+	model: string
+	ip: string
+	access_code: string
+	serial: string
+	status?: string
+	online?: boolean
+	connection_state?: string
+	temperatures?: {
+		nozzle: number
+		bed: number
+		chamber: number
+	}
+	print?: {
+		progress: number
+		time_remaining: number
+		estimated_total_time?: number
+		file_name: string
+		print_type?: string
+		layer_current: number
+		layer_total: number
+		speed_level?: number
+		fan_speed?: number
+		stage?: number
+		lifecycle?: string
+	}
+	filament?: {
+		type: string
+		color: string
+		remaining: number
+	}
+	error?: {
+		print_error: number
+		error_code: number
+		stage: number
+		lifecycle: string
+		gcode_state: string
+		message: string
+	}
+	last_update?: string
+	[key: string]: unknown
 }
