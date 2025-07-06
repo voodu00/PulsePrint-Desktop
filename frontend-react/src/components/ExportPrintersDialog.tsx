@@ -27,6 +27,7 @@ import {
   getFormatColor,
   getFormatDescription,
 } from '../utils/formatUtils';
+import { Logger } from '../utils/logger';
 
 interface ExportPrintersDialogProps {
   isOpen: boolean;
@@ -95,8 +96,7 @@ export const ExportPrintersDialog: React.FC<ExportPrintersDialogProps> = ({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to copy to clipboard:', err);
+      Logger.error('Failed to copy to clipboard:', err);
     }
   }, [exportResult]);
 
