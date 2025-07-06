@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: System info
+      - name: System info (before setup)
         run: |
           echo "=== System Information ==="
           uname -a
@@ -27,11 +27,58 @@ jobs:
           echo "=== Disk Usage ==="
           df -h
           echo ""
-          echo "=== Node.js Version ==="
+          echo "=== Current PATH ==="
+          echo $PATH
+          echo ""
+          echo "=== Available tools ==="
+          which node || echo "Node.js not found"
+          which yarn || echo "Yarn not found"
+          which rustc || echo "Rust not found"
+          which cargo || echo "Cargo not found"
+
+      - name: Install system dependencies
+        run: |
+          echo "=== Installing system dependencies ==="
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+          cache-dependency-path: frontend-react/yarn.lock
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Verify tools installation
+        run: |
+          echo "=== Verifying tool versions ==="
+          echo "Node.js version:"
           node --version
           echo ""
-          echo "=== Rust Version ==="
+          echo "NPM version:"
+          npm --version
+          echo ""
+          echo "Yarn version:"
+          yarn --version
+          echo ""
+          echo "Rust version:"
           rustc --version
+          echo ""
+          echo "Cargo version:"
+          cargo --version
 
       - name: Quick dependency check
         run: |
@@ -46,4 +93,18 @@ jobs:
           echo "=== Resource Usage After Install ==="
           free -h
           echo ""
+          echo "=== Top memory consumers ==="
           ps aux --sort=-%mem | head -10
+
+      - name: Quick build test
+        run: |
+          echo "=== Testing quick build ==="
+          cd frontend-react
+          echo "Building frontend..."
+          yarn build
+          echo "✅ Frontend build successful"
+          echo ""
+          echo "Testing Rust compilation..."
+          cd ../src-tauri
+          cargo check
+          echo "✅ Rust compilation check successful"
