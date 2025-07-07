@@ -86,3 +86,33 @@ export interface AddPrinterParams {
   accessCode: string;
   serial: string;
 }
+
+// Additional interfaces for more specific typing
+export interface TauriPrintJobData {
+  progress: number;
+  time_remaining: number;
+  estimated_total_time?: number;
+  file_name: string;
+  print_type?: string;
+  layer_current: number;
+  layer_total: number;
+  speed_level?: number;
+  fan_speed?: number;
+  stage?: number;
+  lifecycle?: string;
+}
+
+export interface TauriFilamentData {
+  type: string;
+  color: string;
+  remaining: number;
+}
+
+export interface TauriErrorData {
+  print_error: number;
+  error_code: number;
+  stage: number;
+  lifecycle: string;
+  gcode_state: string;
+  message: string;
+}

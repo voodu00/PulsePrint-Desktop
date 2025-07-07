@@ -13,6 +13,8 @@ import {
 } from '../types/import';
 import { TauriMqttService } from './TauriMqttService';
 import { AddPrinterParams } from '../types/printer';
+import { Logger } from '../utils/logger';
+import { ErrorHandler } from '../utils/errorHandler';
 
 export class ImportService {
   private printerService: TauriMqttService;
@@ -72,9 +74,7 @@ export class ImportService {
       }
     } catch (error) {
       errors.push({
-        message: `Failed to parse ${format.toUpperCase()} file: ${
-          error instanceof Error ? error.message : 'Unknown error'
-        }`,
+        message: `Failed to parse ${format.toUpperCase()} file: ${ErrorHandler.getErrorMessage(error)}`,
       });
     }
 
@@ -125,9 +125,7 @@ export class ImportService {
         .filter(Boolean) as ImportablePrinter[];
     } catch (error) {
       errors.push({
-        message: `Invalid JSON: ${
-          error instanceof Error ? error.message : 'Unknown error'
-        }`,
+        message: `Invalid JSON: ${ErrorHandler.getErrorMessage(error)}`,
       });
       return [];
     }
@@ -140,21 +138,48 @@ export class ImportService {
     content: string,
     errors: ImportError[]
   ): Promise<ImportablePrinter[]> {
-    const lines = content
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0);
-
+    const lines = this.parseCSVLines(content);
     if (lines.length === 0) {
       errors.push({ message: 'CSV file is empty' });
       return [];
     }
 
-    // Parse header
-    const header = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-    const requiredFields = ['name', 'model', 'ip', 'accessCode', 'serial'];
+    const header = this.parseCSVHeader(lines[0]);
+    const normalizedHeader = this.normalizeCSVHeader(header);
 
-    // Map common field variations
+    if (!this.validateCSVHeader(normalizedHeader, errors)) {
+      return [];
+    }
+
+    return this.parseCSVDataRows(
+      lines.slice(1),
+      header,
+      normalizedHeader,
+      errors
+    );
+  }
+
+  /**
+   * Parse CSV lines from content
+   */
+  private parseCSVLines(content: string): string[] {
+    return content
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0);
+  }
+
+  /**
+   * Parse CSV header row
+   */
+  private parseCSVHeader(headerLine: string): string[] {
+    return headerLine.split(',').map(h => h.trim().replace(/"/g, ''));
+  }
+
+  /**
+   * Normalize CSV header field names
+   */
+  private normalizeCSVHeader(header: string[]): string[] {
     const fieldMap: { [key: string]: string } = {
       access_code: 'accessCode',
       'access-code': 'accessCode',
@@ -167,30 +192,54 @@ export class ImportService {
       ipaddress: 'ip',
     };
 
-    const normalizedHeader = header.map(field => {
+    return header.map(field => {
       const lower = field.toLowerCase();
       return fieldMap[lower] || lower;
     });
+  }
 
-    // Check for required fields
+  /**
+   * Validate CSV header contains required fields
+   */
+  private validateCSVHeader(
+    normalizedHeader: string[],
+    errors: ImportError[]
+  ): boolean {
+    const requiredFields = ['name', 'model', 'ip', 'accessCode', 'serial'];
     const missingFields = requiredFields.filter(
       field => !normalizedHeader.includes(field)
     );
+
     if (missingFields.length > 0) {
       errors.push({
         message: `Missing required CSV columns: ${missingFields.join(', ')}`,
       });
-      return [];
+      return false;
     }
 
-    // Parse data rows
+    return true;
+  }
+
+  /**
+   * Parse CSV data rows
+   */
+  private parseCSVDataRows(
+    dataLines: string[],
+    header: string[],
+    normalizedHeader: string[],
+    errors: ImportError[]
+  ): ImportablePrinter[] {
     const printers: ImportablePrinter[] = [];
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+
+    for (let i = 0; i < dataLines.length; i++) {
+      const values = dataLines[i]
+        .split(',')
+        .map(v => v.trim().replace(/"/g, ''));
+      const lineNumber = i + 2; // +2 because we removed header and arrays are 0-indexed
 
       if (values.length !== header.length) {
         errors.push({
-          line: i + 1,
+          line: lineNumber,
           message: `Row has ${values.length} columns, expected ${header.length}`,
         });
         continue;
@@ -201,7 +250,7 @@ export class ImportService {
         printer[field] = values[index];
       });
 
-      const normalized = this.normalizePrinter(printer, i + 1, errors);
+      const normalized = this.normalizePrinter(printer, lineNumber, errors);
       if (normalized) {
         printers.push(normalized);
       }
@@ -218,9 +267,8 @@ export class ImportService {
     errors: ImportError[]
   ): Promise<ImportablePrinter[]> {
     try {
-      // Simple YAML parser for basic structures
-      const printers: ImportablePrinter[] = [];
       const lines = content.split('\n');
+      const printers: ImportablePrinter[] = [];
       let currentPrinter: RawPrinterData = {};
       let lineNumber = 0;
 
@@ -228,58 +276,89 @@ export class ImportService {
         lineNumber = i + 1;
         const line = lines[i].trim();
 
-        // Skip empty lines and comments
-        if (!line || line.startsWith('#')) {
+        if (this.shouldSkipYAMLLine(line)) {
           continue;
         }
 
-        // Start of new printer (list item)
-        if (line.startsWith('- name:')) {
+        if (this.isYAMLListItem(line)) {
           // Save previous printer if exists
           if (Object.keys(currentPrinter).length > 0) {
-            const normalized = this.normalizePrinter(
-              currentPrinter,
-              lineNumber,
-              errors
-            );
-            if (normalized) printers.push(normalized);
+            this.addYAMLPrinter(currentPrinter, lineNumber, printers, errors);
           }
-          currentPrinter = {};
-
-          // Parse the name field from this line
-          const nameValue = line.substring(7).trim(); // Remove "- name:"
-          currentPrinter.name = this.cleanYamlValue(nameValue);
-        }
-        // Regular field in current printer
-        else if (line.includes(':') && Object.keys(currentPrinter).length > 0) {
-          const colonIndex = line.indexOf(':');
-          const key = line.substring(0, colonIndex).trim();
-          const value = line.substring(colonIndex + 1).trim();
-
-          if (key && value) {
-            currentPrinter[key] = this.cleanYamlValue(value);
-          }
+          currentPrinter = this.parseYAMLListItem(line);
+        } else if (this.isYAMLField(line, currentPrinter)) {
+          this.parseYAMLField(line, currentPrinter);
         }
       }
 
       // Add last printer
       if (Object.keys(currentPrinter).length > 0) {
-        const normalized = this.normalizePrinter(
-          currentPrinter,
-          lineNumber,
-          errors
-        );
-        if (normalized) printers.push(normalized);
+        this.addYAMLPrinter(currentPrinter, lineNumber, printers, errors);
       }
 
       return printers;
     } catch (error) {
       errors.push({
-        message: `YAML parsing error: ${
-          error instanceof Error ? error.message : 'Unknown error'
-        }`,
+        message: `YAML parsing error: ${ErrorHandler.getErrorMessage(error)}`,
       });
       return [];
+    }
+  }
+
+  /**
+   * Check if YAML line should be skipped
+   */
+  private shouldSkipYAMLLine(line: string): boolean {
+    return !line || line.startsWith('#');
+  }
+
+  /**
+   * Check if line is a YAML list item
+   */
+  private isYAMLListItem(line: string): boolean {
+    return line.startsWith('- name:');
+  }
+
+  /**
+   * Check if line is a YAML field
+   */
+  private isYAMLField(line: string, currentPrinter: RawPrinterData): boolean {
+    return line.includes(':') && Object.keys(currentPrinter).length > 0;
+  }
+
+  /**
+   * Parse YAML list item
+   */
+  private parseYAMLListItem(line: string): RawPrinterData {
+    const nameValue = line.substring(7).trim(); // Remove "- name:"
+    return { name: this.cleanYamlValue(nameValue) };
+  }
+
+  /**
+   * Parse YAML field
+   */
+  private parseYAMLField(line: string, currentPrinter: RawPrinterData): void {
+    const colonIndex = line.indexOf(':');
+    const key = line.substring(0, colonIndex).trim();
+    const value = line.substring(colonIndex + 1).trim();
+
+    if (key && value) {
+      currentPrinter[key] = this.cleanYamlValue(value);
+    }
+  }
+
+  /**
+   * Add YAML printer to results
+   */
+  private addYAMLPrinter(
+    printerData: RawPrinterData,
+    lineNumber: number,
+    printers: ImportablePrinter[],
+    errors: ImportError[]
+  ): void {
+    const normalized = this.normalizePrinter(printerData, lineNumber, errors);
+    if (normalized) {
+      printers.push(normalized);
     }
   }
 
@@ -381,9 +460,7 @@ export class ImportService {
     } catch (error) {
       errors.push({
         line: lineNumber,
-        message: `Failed to normalize printer data: ${
-          error instanceof Error ? error.message : 'Unknown error'
-        }`,
+        message: `Failed to normalize printer data: ${ErrorHandler.getErrorMessage(error)}`,
       });
       return null;
     }
@@ -577,17 +654,10 @@ export class ImportService {
         imported++;
         successfulPrinters.push(printer);
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Import error for printer:', printer.name, error);
-
-        let errorMessage = 'Unknown error';
-        if (error instanceof Error) {
-          errorMessage = error.message;
-        } else if (typeof error === 'string') {
-          errorMessage = error;
-        } else if (error && typeof error === 'object') {
-          errorMessage = JSON.stringify(error);
-        }
+        const errorMessage = ErrorHandler.logAndGetMessage(
+          error,
+          `Import error for printer: ${printer.name}`
+        );
 
         errors.push({
           message: `Failed to import printer "${printer.name}": ${errorMessage}`,

@@ -4,8 +4,12 @@ import {
   PrinterServiceEvent,
   PrinterStatus,
   AddPrinterParams,
+  TauriPrintJobData,
+  TauriFilamentData,
+  TauriErrorData,
 } from '../types/printer';
 import { TauriPrinterData } from '../types/import';
+import { Logger } from '../utils/logger';
 
 export interface TauriPrinterConfig extends TauriPrinterData {
   id: string;
@@ -69,8 +73,7 @@ export class TauriMqttService {
         }
       });
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to setup Tauri event listeners:', error);
+      Logger.error('Failed to setup Tauri event listeners:', error);
     }
   }
 
@@ -99,7 +102,7 @@ export class TauriMqttService {
     };
 
     // Convert print job if present
-    const convertPrintJob = (printData?: any) => {
+    const convertPrintJob = (printData?: TauriPrintJobData) => {
       if (!printData) return null;
 
       return {
@@ -113,7 +116,7 @@ export class TauriMqttService {
     };
 
     // Convert filament info if present
-    const convertFilamentInfo = (filamentData?: any) => {
+    const convertFilamentInfo = (filamentData?: TauriFilamentData) => {
       if (!filamentData) return null;
 
       return {
@@ -124,7 +127,7 @@ export class TauriMqttService {
     };
 
     // Convert error info if present
-    const convertErrorInfo = (errorData?: any) => {
+    const convertErrorInfo = (errorData?: TauriErrorData) => {
       if (!errorData) return null;
 
       return {
@@ -183,8 +186,7 @@ export class TauriMqttService {
         }
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to load printers from localStorage:', error);
+      Logger.error('Failed to load printers from localStorage:', error);
     }
   }
 
@@ -205,8 +207,7 @@ export class TauriMqttService {
         JSON.stringify(printerConfigs)
       );
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to save printers to localStorage:', error);
+      Logger.error('Failed to save printers to localStorage:', error);
     }
   }
 
@@ -340,8 +341,7 @@ export class TauriMqttService {
           try {
             await invoke('remove_printer', { printer_id: tauriPrinter.id });
           } catch (error) {
-            // eslint-disable-next-line no-console
-            console.error(
+            Logger.error(
               `Failed to remove duplicate printer ${tauriPrinter.id}:`,
               error
             );
@@ -356,8 +356,7 @@ export class TauriMqttService {
             const printer = this.convertTauriPrinterToFrontend(tauriPrinter);
             this.printers.set(printer.id, printer);
           } catch (error) {
-            // eslint-disable-next-line no-console
-            console.error(
+            Logger.error(
               `Failed to re-add printer ${tauriPrinter.name}:`,
               error
             );
@@ -381,8 +380,7 @@ export class TauriMqttService {
         data: Array.from(this.printers.values()),
       });
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to initialize TauriMqttService:', error);
+      Logger.error('Failed to initialize TauriMqttService:', error);
 
       // Fallback to localStorage if backend fails
       this.loadPrintersFromStorage();

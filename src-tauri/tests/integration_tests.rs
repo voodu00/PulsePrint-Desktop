@@ -96,25 +96,26 @@ mod integration_tests {
 		);
 	}
 
-	// Placeholder for future integration tests
+	// Placeholder tests for future service implementations
+	// These tests will be expanded when the corresponding services are implemented
 	#[test]
 	fn test_mqtt_service_placeholder() {
-		// TODO: Add actual MQTT service tests when implemented
-		// For now, just verify the module exists
+		// Placeholder for MQTT service integration tests
+		// Will test connection handling, message processing, and error scenarios
 		assert!(true, "MQTT service tests will be implemented here");
 	}
 
 	#[test]
 	fn test_database_service_placeholder() {
-		// TODO: Add actual database service tests when implemented
-		// For now, just verify the module exists
+		// Placeholder for database service integration tests
+		// Will test CRUD operations, data persistence, and error handling
 		assert!(true, "Database service tests will be implemented here");
 	}
 
 	#[test]
 	fn test_commands_placeholder() {
-		// TODO: Add actual command tests when implemented
-		// For now, just verify the module exists
+		// Placeholder for Tauri command integration tests
+		// Will test command execution, parameter validation, and response handling
 		assert!(true, "Command tests will be implemented here");
 	}
 }

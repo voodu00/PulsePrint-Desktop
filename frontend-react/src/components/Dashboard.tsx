@@ -20,6 +20,7 @@ import {
   PrinterServiceEvent,
 } from '../types/printer';
 import { ImportResult } from '../types/import';
+import { Logger } from '../utils/logger';
 
 interface DashboardProps {
   onShowSettings: () => void;
@@ -83,8 +84,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
       try {
         await printerService.pausePrint(printerId);
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to pause print:', error);
+        Logger.error('Failed to pause print:', error);
       }
     },
     [printerService]
@@ -95,8 +95,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
       try {
         await printerService.resumePrint(printerId);
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to resume print:', error);
+        Logger.error('Failed to resume print:', error);
       }
     },
     [printerService]
@@ -108,8 +107,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
         try {
           await printerService.stopPrint(printerId);
         } catch (error) {
-          // eslint-disable-next-line no-console
-          console.error('Failed to stop print:', error);
+          Logger.error('Failed to stop print:', error);
         }
       }
     },
@@ -137,8 +135,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
           serial: printer.serial,
         });
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to add printer:', error);
+        Logger.error('Failed to add printer:', error);
       }
     },
     [printerService]
@@ -186,8 +183,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
         printerService.addEventListener(handlePrinterServiceEvent);
         await printerService.initialize();
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to initialize dashboard:', error);
+        Logger.error('Failed to initialize dashboard:', error);
         setIsLoading(false);
       }
     };
