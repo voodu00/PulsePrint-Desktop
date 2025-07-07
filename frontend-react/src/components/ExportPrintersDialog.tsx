@@ -75,7 +75,9 @@ export const ExportPrintersDialog: React.FC<ExportPrintersDialogProps> = ({
   }, [exportOptions, importService]);
 
   const handleDownload = useCallback(() => {
-    if (!exportResult || !exportResult.success) return;
+    if (!exportResult || !exportResult.success) {
+      return;
+    }
 
     const blob = new Blob([exportResult.data], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -89,7 +91,9 @@ export const ExportPrintersDialog: React.FC<ExportPrintersDialogProps> = ({
   }, [exportResult]);
 
   const handleCopy = useCallback(async () => {
-    if (!exportResult || !exportResult.success) return;
+    if (!exportResult || !exportResult.success) {
+      return;
+    }
 
     try {
       await navigator.clipboard.writeText(exportResult.data);

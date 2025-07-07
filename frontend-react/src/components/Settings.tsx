@@ -69,7 +69,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                 Settings
               </h1>
               <p className="text-muted-foreground">
-                Configure your PrintPulse desktop preferences
+                Configure your PulsePrint desktop preferences
               </p>
             </div>
           </div>

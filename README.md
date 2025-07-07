@@ -1,4 +1,4 @@
-# PrintPulse Desktop
+# PulsePrint Desktop
 
 A cross-platform desktop application for monitoring and controlling Bambu Lab 3D printers, built with Tauri, Rust, and React.
 
@@ -24,7 +24,7 @@ A cross-platform desktop application for monitoring and controlling Bambu Lab 3D
 
    ```bash
    git clone <repository-url>
-   cd printpulse-desktop
+   cd pulseprint-desktop
    ```
 
 2. **Install frontend dependencies**:
@@ -99,7 +99,7 @@ The application connects to Bambu Lab printers using MQTT over port 8883 with TL
 ## Project Structure
 
 ```
-printpulse-desktop/
+pulseprint-desktop/
 ├── src-tauri/                 # Rust backend
 │   ├── src/
 │   │   ├── main.rs           # Application entry point

@@ -41,7 +41,9 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
   title,
   className = '',
 }) => {
-  if (!error) return null;
+  if (!error) {
+    return null;
+  }
 
   const config = severityConfig[severity];
   const Icon = config.icon;

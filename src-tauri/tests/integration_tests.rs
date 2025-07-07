@@ -7,7 +7,7 @@ mod integration_tests {
 	#[test]
 	fn test_cargo_check_succeeds() {
 		let output = Command::new("cargo")
-			.args(&["check"])
+			.args(["check"])
 			.output()
 			.expect("Failed to execute cargo check");
 
@@ -22,7 +22,7 @@ mod integration_tests {
 	fn test_cargo_build_debug_succeeds() {
 		// Use debug build instead of release build - much faster
 		let output = Command::new("cargo")
-			.args(&["build"])
+			.args(["build"])
 			.output()
 			.expect("Failed to execute cargo build");
 
@@ -36,7 +36,7 @@ mod integration_tests {
 	#[test]
 	fn test_clippy_passes() {
 		let output = Command::new("cargo")
-			.args(&["clippy", "--", "-W", "clippy::all"])
+			.args(["clippy", "--", "-W", "clippy::all"])
 			.output()
 			.expect("Failed to execute cargo clippy");
 
@@ -50,7 +50,7 @@ mod integration_tests {
 	#[test]
 	fn test_formatting_is_correct() {
 		let output = Command::new("cargo")
-			.args(&["fmt", "--", "--check"])
+			.args(["fmt", "--", "--check"])
 			.output()
 			.expect("Failed to execute cargo fmt");
 
@@ -66,7 +66,7 @@ mod integration_tests {
 		// Test that our main modules exist and can be referenced
 		// This is a simplified test that just checks if the modules are accessible
 		let output = Command::new("cargo")
-			.args(&["check", "--lib"])
+			.args(["check", "--lib"])
 			.output()
 			.expect("Failed to execute cargo check");
 
@@ -85,7 +85,7 @@ mod integration_tests {
 	fn test_dependencies_are_valid() {
 		// Test that all dependencies can be resolved
 		let output = Command::new("cargo")
-			.args(&["tree"])
+			.args(["tree"])
 			.output()
 			.expect("Failed to execute cargo tree");
 
@@ -102,20 +102,26 @@ mod integration_tests {
 	fn test_mqtt_service_placeholder() {
 		// Placeholder for MQTT service integration tests
 		// Will test connection handling, message processing, and error scenarios
-		assert!(true, "MQTT service tests will be implemented here");
+		println!("MQTT service tests will be implemented here");
+		// For now, just verify that the module exists
+		assert!(std::path::Path::new("src/mqtt.rs").exists());
 	}
 
 	#[test]
 	fn test_database_service_placeholder() {
 		// Placeholder for database service integration tests
 		// Will test CRUD operations, data persistence, and error handling
-		assert!(true, "Database service tests will be implemented here");
+		println!("Database service tests will be implemented here");
+		// For now, just verify that the module exists
+		assert!(std::path::Path::new("src/database.rs").exists());
 	}
 
 	#[test]
 	fn test_commands_placeholder() {
 		// Placeholder for Tauri command integration tests
 		// Will test command execution, parameter validation, and response handling
-		assert!(true, "Command tests will be implemented here");
+		println!("Command tests will be implemented here");
+		// For now, just verify that the module exists
+		assert!(std::path::Path::new("src/commands.rs").exists());
 	}
 }

@@ -1,8 +1,8 @@
 {
 	"$schema": "https://schema.tauri.app/config/2",
-	"productName": "PrintPulse",
+	"productName": "PulsePrint",
 	"version": "0.1.0",
-	"identifier": "com.printpulse.desktop",
+	"identifier": "com.pulseprint.desktop",
 	"build": {
 		"frontendDist": "../frontend-react/build",
 		"devUrl": "http://localhost:3000",
@@ -12,7 +12,7 @@
 	"app": {
 		"windows": [
 			{
-				"title": "PrintPulse Desktop",
+				"title": "PulsePrint Desktop",
 				"width": 1400,
 				"height": 900,
 				"minWidth": 1200,
