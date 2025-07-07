@@ -53,6 +53,15 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
     }
   }, []);
 
+  // Helper function to format refresh interval
+  const formatRefreshInterval = (seconds: number): string => {
+    if (seconds >= 60) {
+      const minutes = seconds / 60;
+      return minutes === 1 ? '1 minute' : `${minutes} minutes`;
+    }
+    return `${seconds} seconds`;
+  };
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -305,7 +314,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                 <h3 className="text-sm font-medium">Auto Refresh</h3>
                 <p className="text-sm text-muted-foreground">
                   Automatically refresh printer data every{' '}
-                  {settings.refreshInterval} seconds
+                  {formatRefreshInterval(settings.refreshInterval)}
                 </p>
               </div>
               <div className="flex items-center gap-2">

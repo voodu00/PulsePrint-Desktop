@@ -147,6 +147,8 @@ pub struct MqttService {
 	printer_states: Arc<RwLock<HashMap<String, Printer>>>,
 	// Add persistent MQTT state accumulation
 	printer_mqtt_states: Arc<RwLock<HashMap<String, serde_json::Value>>>,
+	// Add connection pool for sending commands
+	printer_connections: Arc<RwLock<HashMap<String, AsyncClient>>>,
 	app_handle: AppHandle,
 	command_sender: mpsc::UnboundedSender<(String, PrintCommand)>,
 }
@@ -158,12 +160,14 @@ impl MqttService {
 		let service = Self {
 			printer_states: Arc::new(RwLock::new(HashMap::new())),
 			printer_mqtt_states: Arc::new(RwLock::new(HashMap::new())),
+			printer_connections: Arc::new(RwLock::new(HashMap::new())),
 			app_handle: app_handle.clone(),
 			command_sender,
 		};
 
 		// Start command handler in background using tauri async runtime
-		let _printer_states = Arc::clone(&service.printer_states);
+		let printer_states = Arc::clone(&service.printer_states);
+		let printer_connections = Arc::clone(&service.printer_connections);
 		tauri::async_runtime::spawn(async move {
 			let mut receiver = command_receiver;
 			while let Some((printer_id, command)) = receiver.recv().await {
@@ -172,19 +176,84 @@ impl MqttService {
 					command.action, printer_id
 				);
 
-				// For now, just log the command - real MQTT sending would happen here
-				// In a full implementation, we'd maintain a separate connection pool
+				// Get printer configuration and MQTT client
+				let (printer_serial, mqtt_client) = {
+					let states = printer_states.read().await;
+					let connections = printer_connections.read().await;
+					
+					if let Some(printer) = states.get(&printer_id) {
+						if let Some(client) = connections.get(&printer_id) {
+							(printer.serial.clone(), client.clone())
+						} else {
+							error!("No MQTT connection found for printer {}", printer_id);
+							continue;
+						}
+					} else {
+						error!("Printer {} not found", printer_id);
+						continue;
+					}
+				};
 
-				// Simulate command processing
-				tokio::time::sleep(Duration::from_millis(100)).await;
-				info!(
-					"Command '{}' sent to printer {}",
-					command.action, printer_id
-				);
+				// Send actual MQTT command
+				match Self::send_mqtt_command(&mqtt_client, &printer_serial, &command).await {
+					Ok(_) => {
+						info!("Command '{}' sent successfully to printer {}", command.action, printer_id);
+					}
+					Err(e) => {
+						error!("Failed to send command '{}' to printer {}: {}", command.action, printer_id, e);
+					}
+				}
 			}
 		});
 
 		service
+	}
+
+	async fn send_mqtt_command(
+		client: &AsyncClient,
+		printer_serial: &str,
+		command: &PrintCommand,
+	) -> Result<()> {
+		let request_topic = format!("device/{}/request", printer_serial);
+		let sequence_id = chrono::Utc::now().timestamp_millis().to_string();
+
+		let mqtt_command = match command.action.as_str() {
+			"pause" => serde_json::json!({
+				"print": {
+					"command": "pause",
+					"sequence_id": sequence_id
+				}
+			}),
+			"resume" => serde_json::json!({
+				"print": {
+					"command": "resume",
+					"sequence_id": sequence_id
+				}
+			}),
+			"stop" => serde_json::json!({
+				"print": {
+					"command": "stop",
+					"sequence_id": sequence_id
+				}
+			}),
+			"get_status" => serde_json::json!({
+				"print": {
+					"command": "get_status",
+					"sequence_id": sequence_id
+				}
+			}),
+			_ => {
+				return Err(anyhow!("Unsupported command: {}", command.action));
+			}
+		};
+
+		let message = mqtt_command.to_string();
+		client
+			.publish(request_topic, QoS::AtMostOnce, false, message.as_bytes())
+			.await
+			.map_err(|e| anyhow!("MQTT publish failed: {}", e))?;
+
+		Ok(())
 	}
 
 	pub async fn add_printer(&self, config: PrinterConfig) -> Result<()> {
@@ -225,8 +294,9 @@ impl MqttService {
 		let app_handle = self.app_handle.clone();
 		let printer_states = Arc::clone(&self.printer_states);
 		let printer_mqtt_states = Arc::clone(&self.printer_mqtt_states);
+		let printer_connections = Arc::clone(&self.printer_connections);
 		tauri::async_runtime::spawn(async move {
-			Self::start_mqtt_connection_task(config, printer_states, printer_mqtt_states, app_handle)
+			Self::start_mqtt_connection_task(config, printer_states, printer_mqtt_states, printer_connections, app_handle)
 				.await;
 		});
 
@@ -237,6 +307,7 @@ impl MqttService {
 		config: PrinterConfig,
 		printer_states: Arc<RwLock<HashMap<String, Printer>>>,
 		printer_mqtt_states: Arc<RwLock<HashMap<String, serde_json::Value>>>,
+		printer_connections: Arc<RwLock<HashMap<String, AsyncClient>>>,
 		app_handle: AppHandle,
 	) {
 		let printer_id = config.id.clone();
@@ -312,6 +383,12 @@ impl MqttService {
 						printer.last_update = Utc::now();
 					})
 					.await;
+
+					// Add MQTT client to connection pool
+					{
+						let mut connections = printer_connections.write().await;
+						connections.insert(printer_id.clone(), client.clone());
+					}
 				}
 				Ok(Event::Incoming(Packet::Publish(publish))) => {
 					debug!("Received MQTT message on topic: {}", publish.topic);
@@ -452,12 +529,25 @@ impl MqttService {
                     info!("Status detection for {}: gcode_state={:?}, print_real={}, mc_percent={}, layer_num={}, stg_cur={}, print_error={}, mc_remaining_time={}, fan_gear={}, subtask_name={:?}",
                         config.name, gcode_state, print_real, mc_percent, layer_num, stg_cur, print_error, mc_remaining_time, fan_gear, subtask_name);
 
-                    // Enhanced status detection logic
-                    if print_error > 0 {
-                        printer.status = PrinterStatus::Error;
+                    // Calculate key indicators for status detection
+                    let has_active_job = mc_remaining_time > 0 || (layer_num > 0 && mc_percent < 100.0);
+                    let has_progress = mc_percent > 0.0 && mc_percent < 100.0;
+                    let has_job_name = !subtask_name.is_empty() && subtask_name != "Unknown" && subtask_name != "undefined";
+                    let has_high_temps = printer.temperatures.nozzle > 150 || printer.temperatures.bed > 40;
+                    let has_active_fan = fan_gear > 0;
+                    let is_in_print_stage = stg_cur == 1 || stg_cur == 2 || stg_cur == 3;
+
+                    // Primary status detection: Start with the most reliable indicators
+                    let new_status = if print_error > 0 {
                         info!("Status for {}: Error (print_error={})", config.name, print_error);
+                        PrinterStatus::Error
+                    } else if print_real == 1 {
+                        // print_real is the most reliable indicator of actual printing
+                        info!("Status for {}: Printing (print_real=1)", config.name);
+                        PrinterStatus::Printing
                     } else if let Some(gcode_state) = gcode_state {
-                        printer.status = match gcode_state {
+                        // Use gcode_state when available
+                        match gcode_state {
                             // Standard states
                             "RUNNING" | "PRINTING" => {
                                 info!("Status for {}: Printing (gcode_state={})", config.name, gcode_state);
@@ -481,96 +571,100 @@ impl MqttService {
                                 PrinterStatus::Printing
                             },
                             "IDLE" => {
-                                info!("Status for {}: Idle (gcode_state={})", config.name, gcode_state);
-                                PrinterStatus::Idle
-                            },
-                            _ => {
-                                // When gcode_state is unclear, use comprehensive indicators
-                                let has_active_job = mc_remaining_time > 0 || (layer_num > 0 && mc_percent < 100.0);
-                                let has_active_fan = fan_gear > 0;
-                                let has_high_temps = printer.temperatures.nozzle > 150 || printer.temperatures.bed > 40;
-                                let has_job_name = !subtask_name.is_empty() && subtask_name != "Unknown" && subtask_name != "undefined";
-                                let has_progress = mc_percent > 0.0 && mc_percent < 100.0;
-                                let is_in_print_stage = stg_cur == 1 || stg_cur == 2 || stg_cur == 3; // Print stages
-
-                                info!("Status for {} (unknown gcode_state={}): has_active_job={}, has_progress={}, is_in_print_stage={}, print_real={}, has_high_temps={}, has_active_fan={}, has_job_name={}",
-                                    config.name, gcode_state, has_active_job, has_progress, is_in_print_stage, print_real, has_high_temps, has_active_fan, has_job_name);
-
-                                if print_real == 1 {
-                                    // print_real is a strong indicator of actual printing
-                                    info!("Status for {}: Printing (print_real=1)", config.name);
-                                    PrinterStatus::Printing
-                                } else if has_active_job && (has_progress || is_in_print_stage) {
-                                    info!("Status for {}: Printing (active job + progress/stage)", config.name);
-                                    PrinterStatus::Printing
-                                } else if is_in_print_stage && stg_cur == 2 {
-                                    info!("Status for {}: Paused (stage=2)", config.name);
-                                    PrinterStatus::Paused
-                                } else if is_in_print_stage && stg_cur == 3 {
-                                    info!("Status for {}: Error (stage=3)", config.name);
-                                    PrinterStatus::Error
-                                } else if has_high_temps && has_active_job && (has_active_fan || has_job_name) {
-                                    info!("Status for {}: Printing (high temps + active job + fan/name)", config.name);
-                                    PrinterStatus::Printing
-                                } else if printer.temperatures.nozzle > 200 && has_active_fan && (has_job_name || has_progress) {
-                                    info!("Status for {}: Printing (hot nozzle + fan + name/progress)", config.name);
-                                    PrinterStatus::Printing
-                                } else if has_job_name && has_progress {
-                                    // If we have a job name and progress, it's likely printing
-                                    info!("Status for {}: Printing (job name + progress)", config.name);
-                                    PrinterStatus::Printing
-                                } else if mc_remaining_time > 0 && layer_num > 0 {
-                                    // If we have remaining time and layers, it's likely printing
-                                    info!("Status for {}: Printing (remaining time + layers)", config.name);
-                                    PrinterStatus::Printing
-                                } else if has_high_temps && has_active_fan {
-                                    // High temps + fan could indicate printing
-                                    info!("Status for {}: Printing (high temps + fan)", config.name);
+                                // Even if gcode_state is IDLE, check other indicators
+                                if has_active_job || has_progress || (has_high_temps && has_active_fan) {
+                                    info!("Status for {}: Printing (gcode_state=IDLE but has active indicators)", config.name);
                                     PrinterStatus::Printing
                                 } else {
-                                    info!("Status for {}: Idle (no indicators)", config.name);
+                                    info!("Status for {}: Idle (gcode_state=IDLE, no active indicators)", config.name);
                                     PrinterStatus::Idle
                                 }
+                            },
+                            _ => {
+                                // Unknown gcode_state, use comprehensive fallback logic
+                                info!("Status for {} (unknown gcode_state={}): using fallback logic", config.name, gcode_state);
+                                Self::determine_status_from_indicators(
+                                    &config.name,
+                                    has_active_job,
+                                    has_progress,
+                                    is_in_print_stage,
+                                    stg_cur,
+                                    has_high_temps,
+                                    has_active_fan,
+                                    has_job_name,
+                                    mc_remaining_time,
+                                    layer_num,
+                                    printer.temperatures.nozzle,
+                                )
                             }
-                        };
-                    } else {
-                        // No gcode_state available, use other indicators
-                        let has_active_job = mc_remaining_time > 0 || (layer_num > 0 && mc_percent < 100.0);
-                        let has_progress = mc_percent > 0.0 && mc_percent < 100.0;
-                        let is_in_print_stage = stg_cur == 1 || stg_cur == 2 || stg_cur == 3;
-
-                        info!("Status for {} (no gcode_state): has_active_job={}, has_progress={}, is_in_print_stage={}, print_real={}",
-                            config.name, has_active_job, has_progress, is_in_print_stage, print_real);
-
-                        let has_job_name = !subtask_name.is_empty() && subtask_name != "Unknown" && subtask_name != "undefined";
-                        let has_high_temps = printer.temperatures.nozzle > 150 || printer.temperatures.bed > 40;
-                        let has_active_fan = fan_gear > 0;
-
-                        if print_real == 1 {
-                            info!("Status for {}: Printing (print_real=1, no gcode_state)", config.name);
-                            printer.status = PrinterStatus::Printing;
-                        } else if has_active_job && (has_progress || is_in_print_stage) {
-                            info!("Status for {}: Printing (active job + progress/stage, no gcode_state)", config.name);
-                            printer.status = PrinterStatus::Printing;
-                        } else if is_in_print_stage && stg_cur == 2 {
-                            info!("Status for {}: Paused (stage=2, no gcode_state)", config.name);
-                            printer.status = PrinterStatus::Paused;
-                        } else if is_in_print_stage && stg_cur == 3 {
-                            info!("Status for {}: Error (stage=3, no gcode_state)", config.name);
-                            printer.status = PrinterStatus::Error;
-                        } else if has_job_name && has_progress {
-                            info!("Status for {}: Printing (job name + progress, no gcode_state)", config.name);
-                            printer.status = PrinterStatus::Printing;
-                        } else if mc_remaining_time > 0 && layer_num > 0 {
-                            info!("Status for {}: Printing (remaining time + layers, no gcode_state)", config.name);
-                            printer.status = PrinterStatus::Printing;
-                        } else if has_high_temps && has_active_fan {
-                            info!("Status for {}: Printing (high temps + fan, no gcode_state)", config.name);
-                            printer.status = PrinterStatus::Printing;
-                        } else {
-                            info!("Status for {}: Idle (no indicators, no gcode_state)", config.name);
-                            printer.status = PrinterStatus::Idle;
                         }
+                    } else {
+                        // No gcode_state available, use comprehensive fallback logic
+                        info!("Status for {} (no gcode_state): using comprehensive fallback logic", config.name);
+                        Self::determine_status_from_indicators(
+                            &config.name,
+                            has_active_job,
+                            has_progress,
+                            is_in_print_stage,
+                            stg_cur,
+                            has_high_temps,
+                            has_active_fan,
+                            has_job_name,
+                            mc_remaining_time,
+                            layer_num,
+                            printer.temperatures.nozzle,
+                        )
+                    };
+
+                    // Apply the determined status with validation
+                    let previous_status = printer.status.clone();
+                    let should_update_status = match (&previous_status, &new_status) {
+                        // Allow any change to/from Error or Offline
+                        (PrinterStatus::Error, _) | (_, PrinterStatus::Error) => true,
+                        (PrinterStatus::Offline, _) | (_, PrinterStatus::Offline) => true,
+                        (PrinterStatus::Connecting, _) | (_, PrinterStatus::Connecting) => true,
+                        
+                        // Allow transitions from Idle to Printing if we have strong indicators
+                        (PrinterStatus::Idle, PrinterStatus::Printing) => {
+                            has_active_job || has_progress || print_real == 1 || (has_high_temps && has_active_fan)
+                        },
+                        
+                        // Be more cautious about transitions from Printing to Idle
+                        (PrinterStatus::Printing, PrinterStatus::Idle) => {
+                            // Only allow if we have strong evidence that printing has stopped
+                            let has_completion_indicators = mc_percent >= 100.0 || 
+                                                           (mc_remaining_time == 0 && layer_num == 0) ||
+                                                           (!has_high_temps && !has_active_fan && !has_active_job);
+                            
+                            if has_completion_indicators {
+                                info!("Status for {}: Allowing transition from Printing to Idle (completion indicators)", config.name);
+                                true
+                            } else {
+                                info!("Status for {}: Preventing spurious transition from Printing to Idle (active indicators still present)", config.name);
+                                false
+                            }
+                        },
+                        
+                        // Allow other transitions
+                        _ => true,
+                    };
+                    
+                    if should_update_status {
+                        let status_changed = !matches!((&previous_status, &new_status), 
+                            (PrinterStatus::Idle, PrinterStatus::Idle) |
+                            (PrinterStatus::Printing, PrinterStatus::Printing) |
+                            (PrinterStatus::Paused, PrinterStatus::Paused) |
+                            (PrinterStatus::Error, PrinterStatus::Error) |
+                            (PrinterStatus::Offline, PrinterStatus::Offline) |
+                            (PrinterStatus::Connecting, PrinterStatus::Connecting)
+                        );
+                        
+                        if status_changed {
+                            info!("Status for {}: Changed from {:?} to {:?}", config.name, previous_status, new_status);
+                        }
+                        printer.status = new_status;
+                    } else {
+                        info!("Status for {}: Keeping previous status {:?} (transition validation failed)", config.name, previous_status);
                     }
 
                     // Update print job info if printing/paused or if we have print data
@@ -707,6 +801,37 @@ impl MqttService {
 				for (key, value) in new_map {
 					match base_map.get_mut(&key) {
 						Some(existing) => {
+							// For critical status fields, preserve existing values if new values are empty/null
+							if key == "subtask_name" && value.as_str().unwrap_or("").is_empty() {
+								if let Some(existing_str) = existing.as_str() {
+									if !existing_str.is_empty() && existing_str != "Unknown" && existing_str != "undefined" {
+										// Keep existing non-empty subtask_name
+										continue;
+									}
+								}
+							}
+							
+							// For progress fields, don't overwrite with zero unless it's actually finished
+							if key == "mc_percent" && value.as_f64().unwrap_or(0.0) == 0.0 {
+								if let Some(existing_percent) = existing.as_f64() {
+									if existing_percent > 0.0 && existing_percent < 100.0 {
+										// Keep existing progress unless we have evidence the print is done
+										continue;
+									}
+								}
+							}
+							
+							// For remaining time, don't overwrite with zero unless progress is 100%
+							if key == "mc_remaining_time" && value.as_i64().unwrap_or(0) == 0 {
+								if let Some(existing_time) = existing.as_i64() {
+									if existing_time > 0 {
+										// Keep existing remaining time if it's positive and new value is zero
+										// This prevents losing time data from partial updates
+										continue;
+									}
+								}
+							}
+							
 							*existing = Self::deep_merge(existing.clone(), value);
 						}
 						None => {
@@ -752,6 +877,18 @@ impl MqttService {
 			states.remove(printer_id);
 		}
 
+		// Remove from MQTT states
+		{
+			let mut mqtt_states = self.printer_mqtt_states.write().await;
+			mqtt_states.remove(printer_id);
+		}
+
+		// Remove from connection pool
+		{
+			let mut connections = self.printer_connections.write().await;
+			connections.remove(printer_id);
+		}
+
 		// Emit removal to frontend
 		if let Err(e) = self.app_handle.emit("printer-removed", printer_id) {
 			error!("Failed to emit printer removal: {e}");
@@ -759,5 +896,48 @@ impl MqttService {
 
 		info!("Removed printer: {printer_id}");
 		Ok(())
+	}
+
+	fn determine_status_from_indicators(
+		name: &str,
+		has_active_job: bool,
+		has_progress: bool,
+		is_in_print_stage: bool,
+		stg_cur: i64,
+		has_high_temps: bool,
+		has_active_fan: bool,
+		has_job_name: bool,
+		mc_remaining_time: i64,
+		layer_num: i64,
+		nozzle_temp: i32,
+	) -> PrinterStatus {
+		if has_active_job && (has_progress || is_in_print_stage) {
+			info!("Status for {}: Printing (active job + progress/stage)", name);
+			PrinterStatus::Printing
+		} else if is_in_print_stage && stg_cur == 2 {
+			info!("Status for {}: Paused (stage=2)", name);
+			PrinterStatus::Paused
+		} else if is_in_print_stage && stg_cur == 3 {
+			info!("Status for {}: Error (stage=3)", name);
+			PrinterStatus::Error
+		} else if has_high_temps && has_active_job && (has_active_fan || has_job_name) {
+			info!("Status for {}: Printing (high temps + active job + fan/name)", name);
+			PrinterStatus::Printing
+		} else if nozzle_temp > 200 && has_active_fan && (has_job_name || has_progress) {
+			info!("Status for {}: Printing (hot nozzle + fan + name/progress)", name);
+			PrinterStatus::Printing
+		} else if has_job_name && has_progress {
+			info!("Status for {}: Printing (job name + progress)", name);
+			PrinterStatus::Printing
+		} else if mc_remaining_time > 0 && layer_num > 0 {
+			info!("Status for {}: Printing (remaining time + layers)", name);
+			PrinterStatus::Printing
+		} else if has_high_temps && has_active_fan {
+			info!("Status for {}: Printing (high temps + fan)", name);
+			PrinterStatus::Printing
+		} else {
+			info!("Status for {}: Idle (no indicators)", name);
+			PrinterStatus::Idle
+		}
 	}
 }

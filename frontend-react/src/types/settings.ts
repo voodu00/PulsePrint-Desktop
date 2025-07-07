@@ -16,7 +16,7 @@ export const defaultSettings: SettingsState = {
   darkMode: false,
   autoRefresh: true,
   soundNotifications: false,
-  refreshInterval: 30,
+  refreshInterval: 300,
   showTemperatures: true,
   showProgress: true,
   compactView: false,
