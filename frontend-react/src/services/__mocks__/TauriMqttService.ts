@@ -13,8 +13,4 @@ export class TauriMqttService {
     idle: 0,
     error: 0,
   });
-
-  constructor() {
-    // Mock constructor
-  }
 }

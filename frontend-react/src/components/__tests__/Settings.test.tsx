@@ -2,7 +2,6 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Settings from '../Settings';
 import { SettingsProvider } from '../../contexts/SettingsContext';
-import { TauriMqttService } from '../../services/TauriMqttService';
 
 // Mock the TauriMqttService using the __mocks__ directory
 jest.mock('../../services/TauriMqttService');

@@ -2,48 +2,52 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import PrinterCard from '../PrinterCard';
 import { SettingsProvider } from '../../contexts/SettingsContext';
-import { Printer, PrinterStatus } from '../../types/printer';
+import { Printer, PrinterStatus, PrintJob } from '../../types/printer';
 
 // Mock the progress calculation utility
 jest.mock('../../utils/progressCalculation', () => ({
-  calculateProgress: jest.fn().mockImplementation(printJob => {
-    if (!printJob) return { progress: 0, source: 'unknown' };
+  calculateProgress: jest
+    .fn()
+    .mockImplementation((printJob: PrintJob | null) => {
+      if (!printJob) {
+        return { progress: 0, source: 'unknown' };
+      }
 
-    // If progress is available and not 0, use it directly
-    if (typeof printJob.progress === 'number' && printJob.progress !== 0) {
-      return {
-        progress: printJob.progress,
-        source: 'direct',
-      };
-    }
+      // If progress is available and not 0, use it directly
+      if (typeof printJob.progress === 'number' && printJob.progress !== 0) {
+        return {
+          progress: printJob.progress,
+          source: 'direct',
+        };
+      }
 
-    // Otherwise use time-based calculation if available
-    if (printJob.estimatedTotalTime && printJob.timeRemaining) {
-      const elapsed = printJob.estimatedTotalTime - printJob.timeRemaining;
-      const progress = Math.min(
-        100,
-        Math.max(0, (elapsed / printJob.estimatedTotalTime) * 100)
-      );
-      return {
-        progress,
-        source: 'time',
-      };
-    }
+      // Otherwise use time-based calculation if available
+      if (printJob.estimatedTotalTime && printJob.timeRemaining) {
+        const elapsed = printJob.estimatedTotalTime - printJob.timeRemaining;
+        const progress = Math.min(
+          100,
+          Math.max(0, (elapsed / printJob.estimatedTotalTime) * 100)
+        );
+        return {
+          progress,
+          source: 'time',
+        };
+      }
 
-    // Otherwise use layer-based calculation if available
-    if (printJob.layerTotal && printJob.layerCurrent) {
-      const progress = Math.min(
-        100,
-        Math.max(0, (printJob.layerCurrent / printJob.layerTotal) * 100)
-      );
-      return {
-        progress,
-        source: 'layer',
-      };
-    }
+      // Otherwise use layer-based calculation if available
+      if (printJob.layerTotal && printJob.layerCurrent) {
+        const progress = Math.min(
+          100,
+          Math.max(0, (printJob.layerCurrent / printJob.layerTotal) * 100)
+        );
+        return {
+          progress,
+          source: 'layer',
+        };
+      }
 
-    return { progress: 0, source: 'unknown' };
-  }),
+      return { progress: 0, source: 'unknown' };
+    }),
   getProgressSourceDescription: jest
     .fn()
     .mockReturnValue('Direct from printer'),
@@ -126,8 +130,10 @@ describe('PrinterCard Component', () => {
     mockLocalStorage.getItem.mockReturnValue(null);
 
     // Reset the calculateProgress mock to ensure it returns proper objects
-    mockCalculateProgress.mockImplementation(printJob => {
-      if (!printJob) return { progress: 0, source: 'unknown' };
+    mockCalculateProgress.mockImplementation((printJob: PrintJob | null) => {
+      if (!printJob) {
+        return { progress: 0, source: 'unknown' };
+      }
 
       // If progress is available and not 0, use it directly
       if (typeof printJob.progress === 'number' && printJob.progress !== 0) {
@@ -174,7 +180,7 @@ describe('PrinterCard Component', () => {
       expect(screen.getByText('Test Printer')).toBeInTheDocument();
       expect(screen.getByText('Idle')).toBeInTheDocument();
 
-      const printerCard = document.getElementById('printer-test-printer-1');
+      const printerCard = screen.getByTestId('printer-test-printer-1');
       expect(printerCard).toHaveClass('status-idle');
     });
 
@@ -197,7 +203,7 @@ describe('PrinterCard Component', () => {
       expect(screen.getByText('46%')).toBeInTheDocument(); // Math.round(45.5) = 46
       expect(screen.getByText('Layer 150/300')).toBeInTheDocument();
 
-      const printerCard = document.getElementById('printer-test-printer-1');
+      const printerCard = screen.getByTestId('printer-test-printer-1');
       expect(printerCard).toHaveClass('status-printing');
     });
 
@@ -239,7 +245,7 @@ describe('PrinterCard Component', () => {
       expect(screen.getByText('Error Code:')).toBeInTheDocument();
       expect(screen.getByText('12345')).toBeInTheDocument();
 
-      const printerCard = document.getElementById('printer-test-printer-1');
+      const printerCard = screen.getByTestId('printer-test-printer-1');
       expect(printerCard).toHaveClass('status-error');
     });
 
@@ -249,7 +255,7 @@ describe('PrinterCard Component', () => {
 
       expect(screen.getByText('Offline')).toBeInTheDocument();
 
-      const printerCard = document.getElementById('printer-test-printer-1');
+      const printerCard = screen.getByTestId('printer-test-printer-1');
       expect(printerCard).toHaveClass('status-offline');
     });
 
@@ -259,7 +265,7 @@ describe('PrinterCard Component', () => {
 
       expect(screen.getByText('Connecting')).toBeInTheDocument();
 
-      const printerCard = document.getElementById('printer-test-printer-1');
+      const printerCard = screen.getByTestId('printer-test-printer-1');
       expect(printerCard).toHaveClass('status-connecting');
     });
   });

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import { TauriMqttService } from '../TauriMqttService';
 import { PrinterStatus } from '../../types/printer';
 import { TauriPrinterData } from '../../types/import';
@@ -23,12 +24,10 @@ jest.mock('../../utils/logger', () => ({
 describe('TauriMqttService', () => {
   let service: TauriMqttService;
   let mockInvoke: jest.MockedFunction<any>;
-  let mockListen: jest.MockedFunction<any>;
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockInvoke = require('@tauri-apps/api/core').invoke;
-    mockListen = require('@tauri-apps/api/event').listen;
     service = new TauriMqttService();
   });
 
@@ -49,7 +48,7 @@ describe('TauriMqttService', () => {
         { input: undefined, expected: 'offline' as PrinterStatus },
       ];
 
-      testCases.forEach(({ input, expected }) => {
+      testCases.forEach(function ({ input, expected }) {
         const tauriPrinter: TauriPrinterData = {
           id: 'test-printer',
           name: 'Test Printer',
@@ -68,6 +67,33 @@ describe('TauriMqttService', () => {
       });
     });
 
+    const createIdlePrinter = (): TauriPrinterData => ({
+      id: 'test-printer',
+      name: 'Test Printer',
+      model: 'X1C',
+      ip: '192.168.1.100',
+      access_code: 'test123',
+      serial: 'TEST123',
+      status: 'idle',
+      temperatures: { nozzle: 25, bed: 25, chamber: 25 },
+      last_update: new Date().toISOString(),
+    });
+
+    const createPrintingPrinter = (
+      basePrinter: TauriPrinterData
+    ): TauriPrinterData => ({
+      ...basePrinter,
+      status: 'printing',
+      print: {
+        progress: 15.5,
+        file_name: 'test_model.3mf',
+        layer_current: 50,
+        layer_total: 200,
+        time_remaining: 7200,
+        estimated_total_time: 10800,
+      },
+    });
+
     test('should handle printer status transitions correctly', async () => {
       const eventListener = jest.fn();
       service.addEventListener(eventListener);
@@ -77,19 +103,7 @@ describe('TauriMqttService', () => {
       await service.initialize();
 
       // Simulate printer going from idle to printing by directly calling the conversion method
-      const idlePrinter: TauriPrinterData = {
-        id: 'test-printer',
-        name: 'Test Printer',
-        model: 'X1C',
-        ip: '192.168.1.100',
-        access_code: 'test123',
-        serial: 'TEST123',
-        status: 'idle',
-        temperatures: { nozzle: 25, bed: 25, chamber: 25 },
-        last_update: new Date().toISOString(),
-      };
-
-      // Manually update the service state (simulating what the event handler would do)
+      const idlePrinter = createIdlePrinter();
       const convertedPrinter =
         service['convertTauriPrinterToFrontend'](idlePrinter);
       service['printers'].set(convertedPrinter.id, convertedPrinter);
@@ -98,20 +112,7 @@ describe('TauriMqttService', () => {
       expect(service.getPrinters()[0].status).toBe('idle');
 
       // Simulate transition to printing
-      const printingPrinter: TauriPrinterData = {
-        ...idlePrinter,
-        status: 'printing',
-        print: {
-          progress: 15.5,
-          file_name: 'test_model.3mf',
-          layer_current: 50,
-          layer_total: 200,
-          time_remaining: 7200,
-          estimated_total_time: 10800,
-        },
-      };
-
-      // Manually update the service state again
+      const printingPrinter = createPrintingPrinter(idlePrinter);
       const updatedPrinter =
         service['convertTauriPrinterToFrontend'](printingPrinter);
       service['printers'].set(updatedPrinter.id, updatedPrinter);
@@ -119,6 +120,39 @@ describe('TauriMqttService', () => {
       expect(service.getPrinters()[0].status).toBe('printing');
       expect(service.getPrinters()[0].print?.progress).toBe(15.5);
       expect(service.getPrinters()[0].print?.fileName).toBe('test_model.3mf');
+    });
+
+    const createFullPrinter = (): TauriPrinterData => ({
+      id: 'test-printer',
+      name: 'Test Printer',
+      model: 'X1C',
+      ip: '192.168.1.100',
+      access_code: 'test123',
+      serial: 'TEST123',
+      status: 'printing',
+      temperatures: { nozzle: 220, bed: 60, chamber: 35 },
+      print: {
+        progress: 25.0,
+        file_name: 'important_print.3mf',
+        layer_current: 75,
+        layer_total: 300,
+        time_remaining: 5400,
+        estimated_total_time: 7200,
+      },
+      last_update: new Date().toISOString(),
+    });
+
+    const createPartialUpdatePrinter = (): TauriPrinterData => ({
+      id: 'test-printer',
+      name: 'Test Printer',
+      model: 'X1C',
+      ip: '192.168.1.100',
+      access_code: 'test123',
+      serial: 'TEST123',
+      status: 'printing',
+      temperatures: { nozzle: 225, bed: 60, chamber: 36 },
+      // Note: print data might be missing in partial updates
+      last_update: new Date().toISOString(),
     });
 
     test('should preserve printer state during partial updates', async () => {
@@ -130,27 +164,7 @@ describe('TauriMqttService', () => {
       await service.initialize();
 
       // Initial printer with full data
-      const fullPrinter: TauriPrinterData = {
-        id: 'test-printer',
-        name: 'Test Printer',
-        model: 'X1C',
-        ip: '192.168.1.100',
-        access_code: 'test123',
-        serial: 'TEST123',
-        status: 'printing',
-        temperatures: { nozzle: 220, bed: 60, chamber: 35 },
-        print: {
-          progress: 25.0,
-          file_name: 'important_print.3mf',
-          layer_current: 75,
-          layer_total: 300,
-          time_remaining: 5400,
-          estimated_total_time: 7200,
-        },
-        last_update: new Date().toISOString(),
-      };
-
-      // Manually update the service state
+      const fullPrinter = createFullPrinter();
       const convertedPrinter =
         service['convertTauriPrinterToFrontend'](fullPrinter);
       service['printers'].set(convertedPrinter.id, convertedPrinter);
@@ -161,20 +175,7 @@ describe('TauriMqttService', () => {
       expect(printer.print?.progress).toBe(25.0);
 
       // Simulate partial update (common in real MQTT scenarios)
-      const partialUpdate: TauriPrinterData = {
-        id: 'test-printer',
-        name: 'Test Printer',
-        model: 'X1C',
-        ip: '192.168.1.100',
-        access_code: 'test123',
-        serial: 'TEST123',
-        status: 'printing',
-        temperatures: { nozzle: 225, bed: 60, chamber: 36 },
-        // Note: print data might be missing in partial updates
-        last_update: new Date().toISOString(),
-      };
-
-      // Manually update the service state again
+      const partialUpdate = createPartialUpdatePrinter();
       const updatedConvertedPrinter =
         service['convertTauriPrinterToFrontend'](partialUpdate);
       service['printers'].set(
@@ -192,69 +193,72 @@ describe('TauriMqttService', () => {
   });
 
   describe('Statistics Calculation', () => {
-    test('should calculate statistics correctly', async () => {
-      // Add multiple printers with different statuses directly to the service
-      const printers: TauriPrinterData[] = [
-        {
-          id: 'printer-1',
-          name: 'Printer 1',
-          model: 'X1C',
-          ip: '192.168.1.100',
-          access_code: 'test123',
-          serial: 'TEST001',
-          status: 'printing',
-          temperatures: { nozzle: 220, bed: 60, chamber: 35 },
-          last_update: new Date().toISOString(),
+    const createMockPrinters = (): TauriPrinterData[] => [
+      {
+        id: 'printer-1',
+        name: 'Printer 1',
+        model: 'X1C',
+        ip: '192.168.1.100',
+        access_code: 'test123',
+        serial: 'TEST001',
+        status: 'printing',
+        temperatures: { nozzle: 220, bed: 60, chamber: 35 },
+        last_update: new Date().toISOString(),
+      },
+      {
+        id: 'printer-2',
+        name: 'Printer 2',
+        model: 'A1',
+        ip: '192.168.1.101',
+        access_code: 'test456',
+        serial: 'TEST002',
+        status: 'idle',
+        temperatures: { nozzle: 25, bed: 25, chamber: 25 },
+        last_update: new Date().toISOString(),
+      },
+      {
+        id: 'printer-3',
+        name: 'Printer 3',
+        model: 'X1C',
+        ip: '192.168.1.102',
+        access_code: 'test789',
+        serial: 'TEST003',
+        status: 'error',
+        temperatures: { nozzle: 25, bed: 25, chamber: 25 },
+        error: {
+          print_error: 1,
+          error_code: 12345,
+          stage: 3,
+          lifecycle: 'printing',
+          gcode_state: 'pause',
+          message: 'Filament runout detected',
         },
-        {
-          id: 'printer-2',
-          name: 'Printer 2',
-          model: 'A1',
-          ip: '192.168.1.101',
-          access_code: 'test456',
-          serial: 'TEST002',
-          status: 'idle',
-          temperatures: { nozzle: 25, bed: 25, chamber: 25 },
-          last_update: new Date().toISOString(),
-        },
-        {
-          id: 'printer-3',
-          name: 'Printer 3',
-          model: 'X1C',
-          ip: '192.168.1.102',
-          access_code: 'test789',
-          serial: 'TEST003',
-          status: 'error',
-          temperatures: { nozzle: 25, bed: 25, chamber: 25 },
-          error: {
-            print_error: 1,
-            error_code: 12345,
-            stage: 3,
-            lifecycle: 'printing',
-            gcode_state: 'pause',
-            message: 'Filament runout detected',
-          },
-          last_update: new Date().toISOString(),
-        },
-        {
-          id: 'printer-4',
-          name: 'Printer 4',
-          model: 'A1',
-          ip: '192.168.1.103',
-          access_code: 'test101',
-          serial: 'TEST004',
-          status: 'offline',
-          temperatures: { nozzle: 0, bed: 0, chamber: 0 },
-          last_update: new Date().toISOString(),
-        },
-      ];
+        last_update: new Date().toISOString(),
+      },
+      {
+        id: 'printer-4',
+        name: 'Printer 4',
+        model: 'A1',
+        ip: '192.168.1.103',
+        access_code: 'test101',
+        serial: 'TEST004',
+        status: 'offline',
+        temperatures: { nozzle: 0, bed: 0, chamber: 0 },
+        last_update: new Date().toISOString(),
+      },
+    ];
 
-      // Add all printers directly to the service's internal state
+    const addPrintersToService = (printers: TauriPrinterData[]) => {
       printers.forEach(printer => {
         const convertedPrinter =
           service['convertTauriPrinterToFrontend'](printer);
         service['printers'].set(printer.id, convertedPrinter);
       });
+    };
+
+    test('should calculate statistics correctly', async () => {
+      const printers = createMockPrinters();
+      addPrintersToService(printers);
 
       const stats = service.getStatistics();
       expect(stats.total).toBe(4);

@@ -275,17 +275,27 @@ describe('Status Detection and Core Utilities', () => {
         type: 'nozzle' | 'bed' | 'chamber'
       ) => {
         if (type === 'nozzle') {
-          if (temp > 150) return 'hot';
-          if (temp > 50) return 'warm';
+          if (temp > 150) {
+            return 'hot';
+          }
+          if (temp > 50) {
+            return 'warm';
+          }
           return 'cool';
         }
         if (type === 'bed') {
-          if (temp > 80) return 'hot';
-          if (temp > 40) return 'warm';
+          if (temp > 80) {
+            return 'hot';
+          }
+          if (temp > 40) {
+            return 'warm';
+          }
           return 'cool';
         }
         if (type === 'chamber') {
-          if (temp > 50) return 'warm';
+          if (temp > 50) {
+            return 'warm';
+          }
           return 'cool';
         }
         return 'cool';
