@@ -62,14 +62,18 @@ const PrinterCard: React.FC<PrinterCardProps> = ({
   };
 
   const renderTemperatures = () => {
-    if (!settings.showTemperatures) return null;
+    if (!settings.showTemperatures) {
+      return null;
+    }
 
     const hasTemperatures =
       printer.temperatures.nozzle > 0 ||
       printer.temperatures.bed > 0 ||
       printer.temperatures.chamber > 0;
 
-    if (!isOnline || !hasTemperatures) return null;
+    if (!isOnline || !hasTemperatures) {
+      return null;
+    }
 
     return (
       <div className="space-y-2">
@@ -128,8 +132,12 @@ const PrinterCard: React.FC<PrinterCardProps> = ({
   };
 
   const renderPrintProgress = () => {
-    if (!settings.showProgress) return null;
-    if (!(isPrinting || isPaused) || !printer.print) return null;
+    if (!settings.showProgress) {
+      return null;
+    }
+    if (!(isPrinting || isPaused) || !printer.print) {
+      return null;
+    }
 
     const progressCalc = calculateProgress(printer.print);
     const showProgressSource =
@@ -188,7 +196,9 @@ const PrinterCard: React.FC<PrinterCardProps> = ({
   };
 
   const renderFilamentInfo = () => {
-    if (!printer.filament?.type) return null;
+    if (!printer.filament?.type) {
+      return null;
+    }
 
     return (
       <div className="space-y-2">
@@ -210,7 +220,9 @@ const PrinterCard: React.FC<PrinterCardProps> = ({
   };
 
   const renderErrorInfo = () => {
-    if (!printer.error) return null;
+    if (!printer.error) {
+      return null;
+    }
 
     return (
       <div className="space-y-2">
@@ -242,7 +254,9 @@ const PrinterCard: React.FC<PrinterCardProps> = ({
   };
 
   const renderControlButtons = () => {
-    if (!isOnline || !(isPrinting || isPaused)) return null;
+    if (!isOnline || !(isPrinting || isPaused)) {
+      return null;
+    }
 
     return (
       <div className="control-buttons">

@@ -46,7 +46,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   // Load settings from localStorage on mount
   useEffect(() => {
     const savedSettingsStr = localStorage.getItem(
-      'printpulse-desktop-settings'
+      'pulseprint-desktop-settings'
     );
     if (savedSettingsStr) {
       try {
@@ -92,7 +92,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
 
   const saveSettings = () => {
     localStorage.setItem(
-      'printpulse-desktop-settings',
+      'pulseprint-desktop-settings',
       JSON.stringify(settings)
     );
     setSavedSettings(settings);

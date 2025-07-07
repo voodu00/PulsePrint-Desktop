@@ -13,7 +13,6 @@ import {
 } from '../types/import';
 import { TauriMqttService } from './TauriMqttService';
 import { AddPrinterParams } from '../types/printer';
-import { Logger } from '../utils/logger';
 import { ErrorHandler } from '../utils/errorHandler';
 
 export class ImportService {
@@ -30,16 +29,30 @@ export class ImportService {
     const extension = filename.split('.').pop()?.toLowerCase();
 
     // Try to detect by extension first
-    if (extension === 'json') return 'json';
-    if (extension === 'csv') return 'csv';
-    if (extension === 'yaml' || extension === 'yml') return 'yaml';
-    if (extension === 'txt') return 'txt';
+    if (extension === 'json') {
+      return 'json';
+    }
+    if (extension === 'csv') {
+      return 'csv';
+    }
+    if (extension === 'yaml' || extension === 'yml') {
+      return 'yaml';
+    }
+    if (extension === 'txt') {
+      return 'txt';
+    }
 
     // Fallback to content detection
     const trimmed = content.trim();
-    if (trimmed.startsWith('[') || trimmed.startsWith('{')) return 'json';
-    if (trimmed.includes(',') && trimmed.includes('\n')) return 'csv';
-    if (trimmed.includes('name:') || trimmed.includes('- name:')) return 'yaml';
+    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+      return 'json';
+    }
+    if (trimmed.includes(',') && trimmed.includes('\n')) {
+      return 'csv';
+    }
+    if (trimmed.includes('name:') || trimmed.includes('- name:')) {
+      return 'yaml';
+    }
 
     return 'txt';
   }
@@ -734,7 +747,9 @@ export class ImportService {
   }
 
   private exportToCSV(data: Record<string, string>[]): string {
-    if (data.length === 0) return '';
+    if (data.length === 0) {
+      return '';
+    }
 
     const headers = Object.keys(data[0]);
     const csvData = [

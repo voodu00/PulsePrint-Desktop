@@ -104,7 +104,9 @@ export const ImportPrintersDialog: React.FC<ImportPrintersDialogProps> = ({
   );
 
   const handleImport = useCallback(async () => {
-    if (!selectedFile || !fileContent) return;
+    if (!selectedFile || !fileContent) {
+      return;
+    }
 
     setIsLoading(true);
     setCurrentStep('importing');
@@ -219,7 +221,9 @@ export const ImportPrintersDialog: React.FC<ImportPrintersDialogProps> = ({
   );
 
   const renderPreviewStep = () => {
-    if (!importPreview) return null;
+    if (!importPreview) {
+      return null;
+    }
 
     return (
       <div className="space-y-4">
@@ -449,7 +453,9 @@ export const ImportPrintersDialog: React.FC<ImportPrintersDialogProps> = ({
   );
 
   const renderCompleteStep = () => {
-    if (!importResult) return null;
+    if (!importResult) {
+      return null;
+    }
 
     return (
       <div className="space-y-4">

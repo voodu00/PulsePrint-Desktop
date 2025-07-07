@@ -1,6 +1,6 @@
-# CI/CD Setup for PrintPulse Desktop
+# CI/CD Setup for PulsePrint Desktop
 
-This directory contains the GitHub Actions workflows and configuration files for the PrintPulse Desktop application's CI/CD pipeline.
+This directory contains the GitHub Actions workflows and configuration files for the PulsePrint Desktop application's CI/CD pipeline.
 
 ## 🚀 Workflows
 

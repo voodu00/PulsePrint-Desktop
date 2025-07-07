@@ -1,4 +1,4 @@
-# PrintPulse Desktop - Features & Development Roadmap
+# PulsePrint Desktop - Features & Development Roadmap
 
 ## Current Features (Alpha)
 

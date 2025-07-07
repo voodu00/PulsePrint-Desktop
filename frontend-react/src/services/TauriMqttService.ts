@@ -27,7 +27,7 @@ export interface TauriPrintCommand {
 export class TauriMqttService {
   private listeners: ((event: PrinterServiceEvent) => void)[] = [];
   private printers: Map<string, Printer> = new Map();
-  private static readonly STORAGE_KEY = 'printpulse-printer-configs';
+  private static readonly STORAGE_KEY = 'pulseprint-printer-configs';
 
   constructor() {
     this.setupEventListeners();
@@ -82,7 +82,9 @@ export class TauriMqttService {
   ): Printer {
     // Map Rust status enum to frontend status
     const mapStatus = (rustStatus?: string): PrinterStatus => {
-      if (!rustStatus) return 'offline';
+      if (!rustStatus) {
+        return 'offline';
+      }
 
       switch (rustStatus.toLowerCase()) {
         case 'idle':
@@ -103,7 +105,9 @@ export class TauriMqttService {
 
     // Convert print job if present
     const convertPrintJob = (printData?: TauriPrintJobData) => {
-      if (!printData) return null;
+      if (!printData) {
+        return null;
+      }
 
       return {
         progress: printData.progress || 0,
@@ -117,7 +121,9 @@ export class TauriMqttService {
 
     // Convert filament info if present
     const convertFilamentInfo = (filamentData?: TauriFilamentData) => {
-      if (!filamentData) return null;
+      if (!filamentData) {
+        return null;
+      }
 
       return {
         type: filamentData.type || 'Unknown',
@@ -128,7 +134,9 @@ export class TauriMqttService {
 
     // Convert error info if present
     const convertErrorInfo = (errorData?: TauriErrorData) => {
-      if (!errorData) return null;
+      if (!errorData) {
+        return null;
+      }
 
       return {
         printError: errorData.print_error || 0,

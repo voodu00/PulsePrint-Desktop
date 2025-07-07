@@ -59,7 +59,9 @@ export const Dialog: React.FC<DialogProps> = ({
     }
   };
 
-  if (!open) return null;
+  if (!open) {
+    return null;
+  }
 
   return (
     <div

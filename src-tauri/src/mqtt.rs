@@ -240,7 +240,7 @@ impl MqttService {
 		app_handle: AppHandle,
 	) {
 		let printer_id = config.id.clone();
-		let client_id = format!("printpulse_desktop_{}_{}", config.id, Uuid::new_v4());
+		let client_id = format!("pulseprint_desktop_{}_{}", config.id, Uuid::new_v4());
 
 		let mut mqtt_options = MqttOptions::new(&client_id, &config.ip, 8883);
 		mqtt_options
@@ -248,7 +248,7 @@ impl MqttService {
 			.set_keep_alive(Duration::from_secs(60));
 
 		// Use TLS but bypass certificate validation entirely
-		// This matches PrintPulse behavior: rejectUnauthorized: false
+		// This matches PulsePrint behavior: rejectUnauthorized: false
 		// Bambu Lab printers use self-signed certificates that don't validate
 		// Using setInsecure() equivalent by creating a custom TLS config
 		let tls_config =
