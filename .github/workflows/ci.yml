@@ -164,7 +164,7 @@ jobs:
           yarn test --watchAll=false --coverage
 
       - name: Upload coverage reports
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           file: ./frontend-react/coverage/lcov.info
           flags: frontend
