@@ -13,6 +13,7 @@ rust-version = "1.77.2"
 [lib]
 name = "app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
+doctest = false
 
 [build-dependencies]
 tauri-build = { version = "2.3.0", features = [] }
@@ -30,3 +31,8 @@ chrono = { version = "0.4", features = ["serde"] }
 anyhow = "1.0"
 rustls = "0.22"
 tauri-plugin-sql = { version = "2.3.0", features = ["sqlite"] }
+
+[dev-dependencies]
+tempfile = "3.0"
+assert_cmd = "2.0"
+predicates = "3.0"

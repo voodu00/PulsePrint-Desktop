@@ -25,6 +25,18 @@
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
     <title>PulsePrint Desktop</title>
+    <!-- Tauri API Mock for E2E Testing - Only load during tests -->
+    <script>
+      // Only load the mock during E2E tests (when running in test environment)
+      if (
+        window.location.search.includes('e2e-test') ||
+        (window.location.hostname === 'localhost' && window.navigator.webdriver)
+      ) {
+        const script = document.createElement('script');
+        script.src = '%PUBLIC_URL%/tauri-mock.js';
+        document.head.appendChild(script);
+      }
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

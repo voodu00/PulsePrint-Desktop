@@ -307,6 +307,7 @@ const PrinterCard: React.FC<PrinterCardProps> = ({
         printer.status
       } ${getFlashClasses()}`}
       id={`printer-${printer.id}`}
+      data-testid={`printer-card-${printer.id}`}
     >
       <div className="card-header">
         <div className="flex items-center justify-between">

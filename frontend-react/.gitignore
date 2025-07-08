@@ -27,3 +27,6 @@ yarn-error.log*
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Debug test screenshots
+debug-*.png

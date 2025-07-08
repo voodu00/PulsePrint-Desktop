@@ -17,7 +17,9 @@ export function calculateProgress(
   }
 
   // Method 1: Direct progress (preferred)
-  if (printJob.progress > 0) {
+  // Only use direct progress if it's a meaningful value (not 0 or undefined)
+  // But still handle negative values by clamping them
+  if (typeof printJob.progress === 'number' && printJob.progress !== 0) {
     return {
       progress: Math.min(100, Math.max(0, printJob.progress)),
       source: 'direct',
