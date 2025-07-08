@@ -42,6 +42,22 @@ A cross-platform desktop application for monitoring and controlling Bambu Lab 3D
 
 ## Development
 
+> 📋 **Quick Start**: See [`DEVELOPMENT_GUIDE.md`](./DEVELOPMENT_GUIDE.md) for comprehensive development workflows, pre-commit checks, and release procedures.
+
+### Before You Commit
+
+```bash
+cd src-tauri
+make pre-commit    # Fast checks (~30s)
+```
+
+### Before You Push
+
+```bash
+cd src-tauri
+make pre-push-full    # Full validation (~3min)
+```
+
 ### Running the Development Server
 
 ```bash
@@ -59,6 +75,18 @@ cargo tauri build
 ```
 
 Built applications will be available in `src-tauri/target/release/bundle/`.
+
+### Testing
+
+```bash
+# Quick tests
+cd src-tauri && make test
+
+# Full E2E validation (before releases)
+cd src-tauri && make pre-release-full
+```
+
+For detailed testing information, see the [E2E Test Coverage Summary](./frontend-react/tests/e2e/COVERAGE_SUMMARY.md).
 
 ## Configuration
 

@@ -150,9 +150,9 @@ describe('TauriMqttService - Basic Integration Tests', () => {
     test('should remove printer via service', async () => {
       await service.removePrinter('TEST001');
 
-      // The actual implementation uses { printerId } object parameter
+      // The actual implementation uses { printer_id } object parameter
       expect(mockInvoke).toHaveBeenCalledWith('remove_printer', {
-        printerId: 'TEST001',
+        printer_id: 'TEST001',
       });
     });
 
@@ -160,7 +160,7 @@ describe('TauriMqttService - Basic Integration Tests', () => {
       await service.sendCommand('TEST001', { action: 'pause' });
 
       expect(mockInvoke).toHaveBeenCalledWith('send_printer_command', {
-        printerId: 'TEST001',
+        printer_id: 'TEST001',
         command: { action: 'pause' },
       });
     });

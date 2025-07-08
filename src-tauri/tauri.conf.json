@@ -6,8 +6,8 @@
 	"build": {
 		"frontendDist": "../frontend-react/build",
 		"devUrl": "http://localhost:3000",
-		"beforeDevCommand": "yarn --cwd ../frontend-react start",
-		"beforeBuildCommand": "yarn --cwd ../frontend-react build"
+
+		"beforeBuildCommand": "cd ../frontend-react && yarn build"
 	},
 	"app": {
 		"windows": [

@@ -24,9 +24,13 @@ import { Logger } from '../utils/logger';
 
 interface DashboardProps {
   onShowSettings: () => void;
+  printerService: TauriMqttService;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
+const Dashboard: React.FC<DashboardProps> = ({
+  onShowSettings,
+  printerService,
+}) => {
   const [printers, setPrinters] = useState<Printer[]>([]);
   const [statistics, setStatistics] = useState<PrinterStatistics>({
     total: 0,
@@ -37,7 +41,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const [printerService] = useState(() => new TauriMqttService());
   const [showAddPrinter, setShowAddPrinter] = useState(false);
   const [showImportPrinters, setShowImportPrinters] = useState(false);
   const [showExportPrinters, setShowExportPrinters] = useState(false);
@@ -47,27 +50,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
       switch (event.type) {
         case 'initialized':
         case 'updated':
-          const printersArray = Array.isArray(event.data)
-            ? event.data
-            : [event.data];
-
-          // For 'updated' events, we should always use the full printer list from the service
-          // to avoid partial updates that could cause display issues
-          if (event.type === 'updated') {
-            const fullPrinterList = printerService.getPrinters();
-            setPrinters(fullPrinterList);
-          } else {
-            setPrinters(printersArray);
-          }
-
+        case 'printer_added':
+        case 'printer_removed':
+          // For all these events, get the full printer list from the service
+          // to ensure we have the most up-to-date state
+          const fullPrinterList = printerService.getPrinters();
+          setPrinters(fullPrinterList);
           setStatistics(printerService.getStatistics());
           setLastUpdate(new Date());
+
           if (event.type === 'initialized') {
             setIsLoading(false);
           }
-          break;
-        case 'printer_added':
-          // This event will be followed by an 'updated' event
           break;
         case 'printer_paused':
         case 'printer_resumed':
@@ -193,7 +187,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onShowSettings }) => {
     // Cleanup on unmount
     return () => {
       printerService.removeEventListener(handlePrinterServiceEvent);
-      printerService.destroy();
+      // Don't destroy the service since it's shared between components
     };
   }, [printerService, handlePrinterServiceEvent]);
 

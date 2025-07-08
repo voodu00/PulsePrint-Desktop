@@ -180,16 +180,16 @@ impl MqttService {
 				let (printer_serial, mqtt_client) = {
 					let states = printer_states.read().await;
 					let connections = printer_connections.read().await;
-					
+
 					if let Some(printer) = states.get(&printer_id) {
 						if let Some(client) = connections.get(&printer_id) {
 							(printer.serial.clone(), client.clone())
 						} else {
-							error!("No MQTT connection found for printer {}", printer_id);
+							error!("No MQTT connection found for printer {printer_id}");
 							continue;
 						}
 					} else {
-						error!("Printer {} not found", printer_id);
+						error!("Printer {printer_id} not found");
 						continue;
 					}
 				};
@@ -197,10 +197,16 @@ impl MqttService {
 				// Send actual MQTT command
 				match Self::send_mqtt_command(&mqtt_client, &printer_serial, &command).await {
 					Ok(_) => {
-						info!("Command '{}' sent successfully to printer {}", command.action, printer_id);
+						info!(
+							"Command '{}' sent successfully to printer {}",
+							command.action, printer_id
+						);
 					}
 					Err(e) => {
-						error!("Failed to send command '{}' to printer {}: {}", command.action, printer_id, e);
+						error!(
+							"Failed to send command '{}' to printer {}: {}",
+							command.action, printer_id, e
+						);
 					}
 				}
 			}
@@ -214,7 +220,7 @@ impl MqttService {
 		printer_serial: &str,
 		command: &PrintCommand,
 	) -> Result<()> {
-		let request_topic = format!("device/{}/request", printer_serial);
+		let request_topic = format!("device/{printer_serial}/request");
 		let sequence_id = chrono::Utc::now().timestamp_millis().to_string();
 
 		let mqtt_command = match command.action.as_str() {
@@ -296,8 +302,14 @@ impl MqttService {
 		let printer_mqtt_states = Arc::clone(&self.printer_mqtt_states);
 		let printer_connections = Arc::clone(&self.printer_connections);
 		tauri::async_runtime::spawn(async move {
-			Self::start_mqtt_connection_task(config, printer_states, printer_mqtt_states, printer_connections, app_handle)
-				.await;
+			Self::start_mqtt_connection_task(
+				config,
+				printer_states,
+				printer_mqtt_states,
+				printer_connections,
+				app_handle,
+			)
+			.await;
 		});
 
 		Ok(())
@@ -623,19 +635,19 @@ impl MqttService {
                         (PrinterStatus::Error, _) | (_, PrinterStatus::Error) => true,
                         (PrinterStatus::Offline, _) | (_, PrinterStatus::Offline) => true,
                         (PrinterStatus::Connecting, _) | (_, PrinterStatus::Connecting) => true,
-                        
+
                         // Allow transitions from Idle to Printing if we have strong indicators
                         (PrinterStatus::Idle, PrinterStatus::Printing) => {
                             has_active_job || has_progress || print_real == 1 || (has_high_temps && has_active_fan)
                         },
-                        
+
                         // Be more cautious about transitions from Printing to Idle
                         (PrinterStatus::Printing, PrinterStatus::Idle) => {
                             // Only allow if we have strong evidence that printing has stopped
-                            let has_completion_indicators = mc_percent >= 100.0 || 
+                            let has_completion_indicators = mc_percent >= 100.0 ||
                                                            (mc_remaining_time == 0 && layer_num == 0) ||
                                                            (!has_high_temps && !has_active_fan && !has_active_job);
-                            
+
                             if has_completion_indicators {
                                 info!("Status for {}: Allowing transition from Printing to Idle (completion indicators)", config.name);
                                 true
@@ -644,13 +656,13 @@ impl MqttService {
                                 false
                             }
                         },
-                        
+
                         // Allow other transitions
                         _ => true,
                     };
-                    
+
                     if should_update_status {
-                        let status_changed = !matches!((&previous_status, &new_status), 
+                        let status_changed = !matches!((&previous_status, &new_status),
                             (PrinterStatus::Idle, PrinterStatus::Idle) |
                             (PrinterStatus::Printing, PrinterStatus::Printing) |
                             (PrinterStatus::Paused, PrinterStatus::Paused) |
@@ -658,7 +670,7 @@ impl MqttService {
                             (PrinterStatus::Offline, PrinterStatus::Offline) |
                             (PrinterStatus::Connecting, PrinterStatus::Connecting)
                         );
-                        
+
                         if status_changed {
                             info!("Status for {}: Changed from {:?} to {:?}", config.name, previous_status, new_status);
                         }
@@ -804,13 +816,16 @@ impl MqttService {
 							// For critical status fields, preserve existing values if new values are empty/null
 							if key == "subtask_name" && value.as_str().unwrap_or("").is_empty() {
 								if let Some(existing_str) = existing.as_str() {
-									if !existing_str.is_empty() && existing_str != "Unknown" && existing_str != "undefined" {
+									if !existing_str.is_empty()
+										&& existing_str != "Unknown"
+										&& existing_str != "undefined"
+									{
 										// Keep existing non-empty subtask_name
 										continue;
 									}
 								}
 							}
-							
+
 							// For progress fields, don't overwrite with zero unless it's actually finished
 							if key == "mc_percent" && value.as_f64().unwrap_or(0.0) == 0.0 {
 								if let Some(existing_percent) = existing.as_f64() {
@@ -820,7 +835,7 @@ impl MqttService {
 									}
 								}
 							}
-							
+
 							// For remaining time, don't overwrite with zero unless progress is 100%
 							if key == "mc_remaining_time" && value.as_i64().unwrap_or(0) == 0 {
 								if let Some(existing_time) = existing.as_i64() {
@@ -831,7 +846,7 @@ impl MqttService {
 									}
 								}
 							}
-							
+
 							*existing = Self::deep_merge(existing.clone(), value);
 						}
 						None => {
@@ -898,6 +913,7 @@ impl MqttService {
 		Ok(())
 	}
 
+	#[allow(clippy::too_many_arguments)]
 	fn determine_status_from_indicators(
 		name: &str,
 		has_active_job: bool,
@@ -912,31 +928,31 @@ impl MqttService {
 		nozzle_temp: i32,
 	) -> PrinterStatus {
 		if has_active_job && (has_progress || is_in_print_stage) {
-			info!("Status for {}: Printing (active job + progress/stage)", name);
+			info!("Status for {name}: Printing (active job + progress/stage)");
 			PrinterStatus::Printing
 		} else if is_in_print_stage && stg_cur == 2 {
-			info!("Status for {}: Paused (stage=2)", name);
+			info!("Status for {name}: Paused (stage=2)");
 			PrinterStatus::Paused
 		} else if is_in_print_stage && stg_cur == 3 {
-			info!("Status for {}: Error (stage=3)", name);
+			info!("Status for {name}: Error (stage=3)");
 			PrinterStatus::Error
 		} else if has_high_temps && has_active_job && (has_active_fan || has_job_name) {
-			info!("Status for {}: Printing (high temps + active job + fan/name)", name);
+			info!("Status for {name}: Printing (high temps + active job + fan/name)");
 			PrinterStatus::Printing
 		} else if nozzle_temp > 200 && has_active_fan && (has_job_name || has_progress) {
-			info!("Status for {}: Printing (hot nozzle + fan + name/progress)", name);
+			info!("Status for {name}: Printing (hot nozzle + fan + name/progress)");
 			PrinterStatus::Printing
 		} else if has_job_name && has_progress {
-			info!("Status for {}: Printing (job name + progress)", name);
+			info!("Status for {name}: Printing (job name + progress)");
 			PrinterStatus::Printing
 		} else if mc_remaining_time > 0 && layer_num > 0 {
-			info!("Status for {}: Printing (remaining time + layers)", name);
+			info!("Status for {name}: Printing (remaining time + layers)");
 			PrinterStatus::Printing
 		} else if has_high_temps && has_active_fan {
-			info!("Status for {}: Printing (high temps + fan)", name);
+			info!("Status for {name}: Printing (high temps + fan)");
 			PrinterStatus::Printing
 		} else {
-			info!("Status for {}: Idle (no indicators)", name);
+			info!("Status for {name}: Idle (no indicators)");
 			PrinterStatus::Idle
 		}
 	}

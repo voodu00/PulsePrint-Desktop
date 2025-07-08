@@ -58,7 +58,7 @@ export const AddPrinterDialog: React.FC<AddPrinterDialogProps> = ({
             <div>
               <label
                 htmlFor="name"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
                 Printer Name
               </label>
@@ -69,7 +69,7 @@ export const AddPrinterDialog: React.FC<AddPrinterDialogProps> = ({
                 value={formData.name}
                 onChange={handleChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                 placeholder="My X1 Carbon"
               />
             </div>
@@ -77,7 +77,7 @@ export const AddPrinterDialog: React.FC<AddPrinterDialogProps> = ({
             <div>
               <label
                 htmlFor="model"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
                 Printer Model
               </label>
@@ -86,7 +86,7 @@ export const AddPrinterDialog: React.FC<AddPrinterDialogProps> = ({
                 name="model"
                 value={formData.model}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
               >
                 <option value="X1C">X1 Carbon</option>
                 <option value="X1E">X1 Elite</option>
@@ -100,7 +100,7 @@ export const AddPrinterDialog: React.FC<AddPrinterDialogProps> = ({
             <div>
               <label
                 htmlFor="ip"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
                 IP Address
               </label>
@@ -111,7 +111,7 @@ export const AddPrinterDialog: React.FC<AddPrinterDialogProps> = ({
                 value={formData.ip}
                 onChange={handleChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                 placeholder="192.168.1.100"
               />
             </div>
@@ -119,7 +119,7 @@ export const AddPrinterDialog: React.FC<AddPrinterDialogProps> = ({
             <div>
               <label
                 htmlFor="accessCode"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
                 Access Code
               </label>
@@ -130,7 +130,7 @@ export const AddPrinterDialog: React.FC<AddPrinterDialogProps> = ({
                 value={formData.accessCode}
                 onChange={handleChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                 placeholder="12345678"
               />
             </div>
@@ -138,7 +138,7 @@ export const AddPrinterDialog: React.FC<AddPrinterDialogProps> = ({
             <div>
               <label
                 htmlFor="serial"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
                 Serial Number
               </label>
@@ -149,7 +149,7 @@ export const AddPrinterDialog: React.FC<AddPrinterDialogProps> = ({
                 value={formData.serial}
                 onChange={handleChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                 placeholder="01S00A123456789"
               />
             </div>

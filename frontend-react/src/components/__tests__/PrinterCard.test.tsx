@@ -180,7 +180,7 @@ describe('PrinterCard Component', () => {
       expect(screen.getByText('Test Printer')).toBeInTheDocument();
       expect(screen.getByText('Idle')).toBeInTheDocument();
 
-      const printerCard = screen.getByTestId('printer-test-printer-1');
+      const printerCard = screen.getByTestId('printer-card-test-printer-1');
       expect(printerCard).toHaveClass('status-idle');
     });
 
@@ -203,7 +203,7 @@ describe('PrinterCard Component', () => {
       expect(screen.getByText('46%')).toBeInTheDocument(); // Math.round(45.5) = 46
       expect(screen.getByText('Layer 150/300')).toBeInTheDocument();
 
-      const printerCard = screen.getByTestId('printer-test-printer-1');
+      const printerCard = screen.getByTestId('printer-card-test-printer-1');
       expect(printerCard).toHaveClass('status-printing');
     });
 
@@ -245,7 +245,7 @@ describe('PrinterCard Component', () => {
       expect(screen.getByText('Error Code:')).toBeInTheDocument();
       expect(screen.getByText('12345')).toBeInTheDocument();
 
-      const printerCard = screen.getByTestId('printer-test-printer-1');
+      const printerCard = screen.getByTestId('printer-card-test-printer-1');
       expect(printerCard).toHaveClass('status-error');
     });
 
@@ -255,7 +255,7 @@ describe('PrinterCard Component', () => {
 
       expect(screen.getByText('Offline')).toBeInTheDocument();
 
-      const printerCard = screen.getByTestId('printer-test-printer-1');
+      const printerCard = screen.getByTestId('printer-card-test-printer-1');
       expect(printerCard).toHaveClass('status-offline');
     });
 
@@ -265,7 +265,7 @@ describe('PrinterCard Component', () => {
 
       expect(screen.getByText('Connecting')).toBeInTheDocument();
 
-      const printerCard = screen.getByTestId('printer-test-printer-1');
+      const printerCard = screen.getByTestId('printer-card-test-printer-1');
       expect(printerCard).toHaveClass('status-connecting');
     });
   });

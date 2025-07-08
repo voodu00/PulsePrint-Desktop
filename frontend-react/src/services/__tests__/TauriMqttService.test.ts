@@ -349,7 +349,7 @@ describe('TauriMqttService', () => {
 
       await expect(service.removePrinter('test-id')).resolves.not.toThrow();
       expect(mockInvoke).toHaveBeenCalledWith('remove_printer', {
-        printerId: 'test-id',
+        printer_id: 'test-id',
       });
     });
 

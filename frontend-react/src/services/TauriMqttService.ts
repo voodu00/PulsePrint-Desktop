@@ -1,4 +1,3 @@
-import { invoke } from '@tauri-apps/api/core';
 import {
   Printer,
   PrinterServiceEvent,
@@ -10,6 +9,58 @@ import {
 } from '../types/printer';
 import { TauriPrinterData } from '../types/import';
 import { Logger } from '../utils/logger';
+
+// Dynamic import to support mocking in tests
+let invoke: any = null;
+let listen: any = null;
+
+// Initialize invoke function - check for mock first, then use real Tauri API
+const getInvokeFunction = async () => {
+  if (invoke) {
+    return invoke;
+  }
+
+  // Check if we're in a test environment with a mock
+  if (typeof window !== 'undefined' && (window as any).__TAURI_MOCK__) {
+    console.log('🔧 Using Tauri mock for testing');
+    invoke = (window as any).__TAURI_MOCK__.invoke;
+    return invoke;
+  }
+
+  // Use real Tauri API
+  try {
+    const tauriCore = await import('@tauri-apps/api/core');
+    invoke = tauriCore.invoke;
+    return invoke;
+  } catch (error) {
+    console.error('Failed to load Tauri API:', error);
+    throw error;
+  }
+};
+
+// Initialize listen function - check for mock first, then use real Tauri API
+const getListenFunction = async () => {
+  if (listen) {
+    return listen;
+  }
+
+  // Check if we're in a test environment with a mock
+  if (typeof window !== 'undefined' && (window as any).__TAURI_MOCK__) {
+    console.log('🔧 Using Tauri mock listen for testing');
+    listen = (window as any).__TAURI_MOCK__.listen;
+    return listen;
+  }
+
+  // Use real Tauri API
+  try {
+    const tauriEvent = await import('@tauri-apps/api/event');
+    listen = tauriEvent.listen;
+    return listen;
+  } catch (error) {
+    console.error('Failed to load Tauri event API:', error);
+    throw error;
+  }
+};
 
 export interface TauriPrinterConfig extends TauriPrinterData {
   id: string;
@@ -28,18 +79,19 @@ export class TauriMqttService {
   private listeners: ((event: PrinterServiceEvent) => void)[] = [];
   private printers: Map<string, Printer> = new Map();
   private static readonly STORAGE_KEY = 'pulseprint-printer-configs';
+  private eventListenersSetup: Promise<void>;
 
   constructor() {
-    this.setupEventListeners();
+    this.eventListenersSetup = this.setupEventListeners();
   }
 
   private async setupEventListeners() {
     // Set up Tauri event listeners for real-time MQTT updates from actual printers
     try {
-      const { listen } = await import('@tauri-apps/api/event');
+      const listenFunction = await getListenFunction();
 
       // Listen for printer status updates from the Rust backend
-      await listen('printer-update', event => {
+      await listenFunction('printer-update', (event: any) => {
         const printerData = event.payload as TauriPrinterData;
         const printer = this.convertTauriPrinterToFrontend(printerData);
 
@@ -53,8 +105,28 @@ export class TauriMqttService {
         });
       });
 
+      // Listen for printer addition events (especially for mock system)
+      await listenFunction('printer-added', (event: any) => {
+        const printerData = event.payload as TauriPrinterData;
+        const printer = this.convertTauriPrinterToFrontend(printerData);
+
+        // Update local state
+        this.printers.set(printer.id, printer);
+
+        // Notify listeners with added printer data
+        this.notifyListeners({
+          type: 'printer_added',
+          data: printer,
+        });
+
+        this.notifyListeners({
+          type: 'updated',
+          data: Array.from(this.printers.values()),
+        });
+      });
+
       // Listen for printer removal events
-      await listen('printer-removed', event => {
+      await listenFunction('printer-removed', (event: any) => {
         const printerId = event.payload as string;
         const printer = this.printers.get(printerId);
 
@@ -231,7 +303,8 @@ export class TauriMqttService {
     }
 
     const config = this.convertFrontendToTauriConfig(params);
-    await invoke('add_printer', { config });
+    const invokeFunction = await getInvokeFunction();
+    await invokeFunction('add_printer', { config });
 
     // Create printer object for local state
     const newPrinter = this.convertTauriPrinterToFrontend(config);
@@ -258,7 +331,8 @@ export class TauriMqttService {
     // Get printer before removing
     const printer = this.printers.get(printerId);
 
-    await invoke('remove_printer', { printerId });
+    const invokeFunction = await getInvokeFunction();
+    await invokeFunction('remove_printer', { printer_id: printerId });
 
     // Update local state
     this.printers.delete(printerId);
@@ -281,29 +355,39 @@ export class TauriMqttService {
   }
 
   async getAllPrinters(): Promise<Printer[]> {
-    const tauriPrinters = await invoke<TauriPrinterData[]>('get_all_printers');
-    return tauriPrinters.map(printer =>
+    const invokeFunction = await getInvokeFunction();
+    const tauriPrinters = (await invokeFunction(
+      'get_all_printers'
+    )) as TauriPrinterData[];
+    return tauriPrinters.map((printer: TauriPrinterData) =>
       this.convertTauriPrinterToFrontend(printer)
     );
   }
 
   async pausePrint(printerId: string): Promise<void> {
-    await invoke('pause_printer', { printerId });
+    const invokeFunction = await getInvokeFunction();
+    await invokeFunction('pause_printer', { printer_id: printerId });
   }
 
   async resumePrint(printerId: string): Promise<void> {
-    await invoke('resume_printer', { printerId });
+    const invokeFunction = await getInvokeFunction();
+    await invokeFunction('resume_printer', { printer_id: printerId });
   }
 
   async stopPrint(printerId: string): Promise<void> {
-    await invoke('stop_printer', { printerId });
+    const invokeFunction = await getInvokeFunction();
+    await invokeFunction('stop_printer', { printer_id: printerId });
   }
 
   async sendCommand(
     printerId: string,
     command: TauriPrintCommand
   ): Promise<void> {
-    await invoke('send_printer_command', { printerId, command });
+    const invokeFunction = await getInvokeFunction();
+    await invokeFunction('send_printer_command', {
+      printer_id: printerId,
+      command,
+    });
   }
 
   // Event listener management
@@ -324,10 +408,15 @@ export class TauriMqttService {
 
   // Initialize the service
   async initialize(): Promise<void> {
+    // Ensure event listeners are set up first
+    await this.eventListenersSetup;
+
     try {
       // Get current printers from backend (this is the source of truth)
-      const backendPrinters =
-        await invoke<TauriPrinterData[]>('get_all_printers');
+      const invokeFunction = await getInvokeFunction();
+      const backendPrinters = (await invokeFunction(
+        'get_all_printers'
+      )) as TauriPrinterData[];
 
       // Clear local state and start fresh
       this.printers.clear();
@@ -347,7 +436,9 @@ export class TauriMqttService {
         // Remove all printers from backend
         for (const tauriPrinter of backendPrinters) {
           try {
-            await invoke('remove_printer', { printer_id: tauriPrinter.id });
+            await invokeFunction('remove_printer', {
+              printer_id: tauriPrinter.id,
+            });
           } catch (error) {
             Logger.error(
               `Failed to remove duplicate printer ${tauriPrinter.id}:`,
@@ -360,7 +451,7 @@ export class TauriMqttService {
         const uniquePrintersArray = Array.from(uniquePrinters.values());
         for (const tauriPrinter of uniquePrintersArray) {
           try {
-            await invoke('add_printer', { config: tauriPrinter });
+            await invokeFunction('add_printer', { config: tauriPrinter });
             const printer = this.convertTauriPrinterToFrontend(tauriPrinter);
             this.printers.set(printer.id, printer);
           } catch (error) {

@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -23,12 +23,14 @@ import { TauriMqttService } from '../services/TauriMqttService';
 import { ImportPrintersDialog } from './ImportPrintersDialog';
 import { ExportPrintersDialog } from './ExportPrintersDialog';
 import { ImportResult } from '../types/import';
+import { PrinterServiceEvent } from '../types/printer';
 
 interface SettingsProps {
   onBack: () => void;
+  printerService: TauriMqttService;
 }
 
-const Settings: React.FC<SettingsProps> = ({ onBack }) => {
+const Settings: React.FC<SettingsProps> = ({ onBack, printerService }) => {
   const {
     settings,
     updateSetting,
@@ -37,21 +39,48 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
     resetSettings,
   } = useSettings();
 
-  const [printerService] = React.useState(() => new TauriMqttService());
   const [showImportDialog, setShowImportDialog] = React.useState(false);
   const [showExportDialog, setShowExportDialog] = React.useState(false);
+  const [printerCount, setPrinterCount] = useState(0);
 
-  React.useEffect(() => {
-    printerService.initialize();
-    return () => printerService.destroy();
-  }, [printerService]);
+  // Handle printer service events to update export button state
+  const handlePrinterServiceEvent = useCallback(
+    (event: PrinterServiceEvent) => {
+      switch (event.type) {
+        case 'initialized':
+        case 'updated':
+        case 'printer_added':
+        case 'printer_removed':
+          setPrinterCount(printerService.getPrinters().length);
+          break;
+      }
+    },
+    [printerService]
+  );
 
-  const handleImportComplete = useCallback((result: ImportResult) => {
-    if (result.success && result.imported > 0 && !result.validateOnly) {
-      // Show success message or refresh data
-      // Import completed successfully
-    }
-  }, []);
+  useEffect(() => {
+    // Add event listener for printer service events
+    printerService.addEventListener(handlePrinterServiceEvent);
+
+    // Initialize printer count
+    setPrinterCount(printerService.getPrinters().length);
+
+    // Cleanup on unmount
+    return () => {
+      printerService.removeEventListener(handlePrinterServiceEvent);
+    };
+  }, [printerService, handlePrinterServiceEvent]);
+
+  const handleImportComplete = useCallback(
+    (result: ImportResult) => {
+      if (result.success && result.imported > 0 && !result.validateOnly) {
+        // Show success message or refresh data
+        // Import completed successfully
+        setPrinterCount(printerService.getPrinters().length);
+      }
+    },
+    [printerService]
+  );
 
   // Helper function to format refresh interval
   const formatRefreshInterval = (seconds: number): string => {
@@ -210,7 +239,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
               <div className="space-y-1">
                 <h3 className="text-sm font-medium">Show Temperatures</h3>
                 <p className="text-sm text-muted-foreground">
-                  Display temperature information on printer cards
+                  Display nozzle, bed, and chamber temperatures on printer cards
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -230,10 +259,9 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
 
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <h3 className="text-sm font-medium">Show Progress Details</h3>
+                <h3 className="text-sm font-medium">Show Progress</h3>
                 <p className="text-sm text-muted-foreground">
-                  Display detailed progress information including layers and
-                  time
+                  Display print progress and time remaining on printer cards
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -273,16 +301,9 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
 
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <h3 className="text-sm font-medium flex items-center gap-2">
-                  {settings.darkMode ? (
-                    <Moon className="w-4 h-4" />
-                  ) : (
-                    <Sun className="w-4 h-4" />
-                  )}
-                  Dark Mode
-                </h3>
+                <h3 className="text-sm font-medium">Dark Mode</h3>
                 <p className="text-sm text-muted-foreground">
-                  Switch between light and dark themes
+                  Use dark theme for better visibility in low light
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -293,8 +314,13 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                   }
                 />
                 <Badge variant={settings.darkMode ? 'default' : 'secondary'}>
-                  {settings.darkMode ? 'Dark' : 'Light'}
+                  {settings.darkMode ? 'Enabled' : 'Disabled'}
                 </Badge>
+                {settings.darkMode ? (
+                  <Moon className="w-4 h-4 text-blue-600" />
+                ) : (
+                  <Sun className="w-4 h-4 text-yellow-600" />
+                )}
               </div>
             </div>
           </CardContent>
@@ -393,7 +419,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                   onClick={() => setShowExportDialog(true)}
                   variant="outline"
                   className="w-full"
-                  disabled={printerService.getPrinters().length === 0}
+                  disabled={printerCount === 0}
                 >
                   <Download className="w-4 h-4 mr-2" />
                   Export Printers

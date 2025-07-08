@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Settings from '../Settings';
 import { SettingsProvider } from '../../contexts/SettingsContext';
+import { TauriMqttService } from '../../services/TauriMqttService';
 
 // Mock the TauriMqttService using the __mocks__ directory
 jest.mock('../../services/TauriMqttService');
@@ -44,10 +45,14 @@ Object.defineProperty(document.documentElement, 'classList', {
   value: mockClassList,
 });
 
-const renderSettings = (onBack = jest.fn()) => {
+const renderSettings = (
+  onBack = jest.fn(),
+  printerService?: TauriMqttService
+) => {
+  const mockPrinterService = printerService || new TauriMqttService();
   return render(
     <SettingsProvider>
-      <Settings onBack={onBack} />
+      <Settings onBack={onBack} printerService={mockPrinterService} />
     </SettingsProvider>
   );
 };
@@ -374,7 +379,7 @@ describe('Settings Component', () => {
         screen.getByRole('heading', { name: /show temperatures/i })
       ).toBeInTheDocument();
       expect(
-        screen.getByRole('heading', { name: /show progress details/i })
+        screen.getByRole('heading', { name: /show progress/i })
       ).toBeInTheDocument();
       expect(
         screen.getByRole('heading', { name: /compact view/i })
