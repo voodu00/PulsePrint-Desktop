@@ -91,16 +91,21 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev \
-            build-essential \
-            curl \
-            wget \
-            file \
-            libxdo-dev \
-            libssl-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev
+          # Check if dependencies are already installed, install if needed
+          if ! dpkg -l | grep -q libwebkit2gtk-4.1-dev; then
+            sudo apt-get update || echo "Could not update package list"
+            sudo apt-get install -y libwebkit2gtk-4.1-dev \
+              build-essential \
+              curl \
+              wget \
+              file \
+              libxdo-dev \
+              libssl-dev \
+              libayatana-appindicator3-dev \
+              librsvg2-dev || echo "Could not install some dependencies"
+          else
+            echo "System dependencies already installed"
+          fi
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -183,16 +188,21 @@ jobs:
 
       - name: Install system dependencies (for Rust integration tests)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev \
-            build-essential \
-            curl \
-            wget \
-            file \
-            libxdo-dev \
-            libssl-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev
+          # Check if dependencies are already installed, install if needed
+          if ! dpkg -l | grep -q libwebkit2gtk-4.1-dev; then
+            sudo apt-get update || echo "Could not update package list"
+            sudo apt-get install -y libwebkit2gtk-4.1-dev \
+              build-essential \
+              curl \
+              wget \
+              file \
+              libxdo-dev \
+              libssl-dev \
+              libayatana-appindicator3-dev \
+              librsvg2-dev || echo "Could not install some dependencies"
+          else
+            echo "System dependencies already installed"
+          fi
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
