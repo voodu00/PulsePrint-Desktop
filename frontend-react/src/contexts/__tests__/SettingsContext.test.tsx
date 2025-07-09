@@ -22,16 +22,19 @@ const TestComponent: React.FC = () => {
 
   return (
     <div>
-      <div data-testid="refresh-interval">{settings.refreshInterval}</div>
       <div data-testid="dark-mode">{settings.darkMode.toString()}</div>
-      <div data-testid="auto-refresh">{settings.autoRefresh.toString()}</div>
+      <div data-testid="sound-notifications">
+        {settings.soundNotifications.toString()}
+      </div>
       <div data-testid="unsaved-changes">{hasUnsavedChanges.toString()}</div>
 
       <button
-        data-testid="update-refresh-interval"
-        onClick={() => updateSetting('refreshInterval', 600)}
+        data-testid="toggle-sound-notifications"
+        onClick={() =>
+          updateSetting('soundNotifications', !settings.soundNotifications)
+        }
       >
-        Update Refresh Interval
+        Toggle Sound Notifications
       </button>
 
       <button
@@ -83,16 +86,6 @@ describe('SettingsContext', () => {
   });
 
   describe('Default Settings', () => {
-    test('should use 5-minute refresh interval as default', () => {
-      render(
-        <SettingsProvider>
-          <TestComponent />
-        </SettingsProvider>
-      );
-
-      expect(screen.getByTestId('refresh-interval')).toHaveTextContent('300');
-    });
-
     test('should initialize with all default settings', () => {
       render(
         <SettingsProvider>
@@ -100,15 +93,14 @@ describe('SettingsContext', () => {
         </SettingsProvider>
       );
 
-      expect(screen.getByTestId('refresh-interval')).toHaveTextContent('300');
       expect(screen.getByTestId('dark-mode')).toHaveTextContent('false');
-      expect(screen.getByTestId('auto-refresh')).toHaveTextContent('true');
+      expect(screen.getByTestId('sound-notifications')).toHaveTextContent(
+        'false'
+      );
       expect(screen.getByTestId('unsaved-changes')).toHaveTextContent('false');
     });
 
     test('should verify default settings object has correct values', () => {
-      expect(defaultSettings.refreshInterval).toBe(300);
-      expect(defaultSettings.autoRefresh).toBe(true);
       expect(defaultSettings.darkMode).toBe(false);
       expect(defaultSettings.idleNotifications).toBe(false);
       expect(defaultSettings.errorNotifications).toBe(true);
@@ -120,18 +112,22 @@ describe('SettingsContext', () => {
   });
 
   describe('Settings Updates', () => {
-    test('should update refresh interval setting', () => {
+    test('should update sound notifications setting', () => {
       render(
         <SettingsProvider>
           <TestComponent />
         </SettingsProvider>
       );
 
-      expect(screen.getByTestId('refresh-interval')).toHaveTextContent('300');
+      expect(screen.getByTestId('sound-notifications')).toHaveTextContent(
+        'false'
+      );
 
-      fireEvent.click(screen.getByTestId('update-refresh-interval'));
+      fireEvent.click(screen.getByTestId('toggle-sound-notifications'));
 
-      expect(screen.getByTestId('refresh-interval')).toHaveTextContent('600');
+      expect(screen.getByTestId('sound-notifications')).toHaveTextContent(
+        'true'
+      );
       expect(screen.getByTestId('unsaved-changes')).toHaveTextContent('true');
     });
 
@@ -175,14 +171,14 @@ describe('SettingsContext', () => {
         </SettingsProvider>
       );
 
-      fireEvent.click(screen.getByTestId('update-refresh-interval'));
+      fireEvent.click(screen.getByTestId('toggle-sound-notifications'));
       fireEvent.click(screen.getByTestId('save-settings'));
 
       expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
         'pulseprint-desktop-settings',
         JSON.stringify({
           ...defaultSettings,
-          refreshInterval: 600,
+          soundNotifications: true,
         })
       );
 
@@ -192,9 +188,8 @@ describe('SettingsContext', () => {
     test('should load settings from localStorage on mount', () => {
       const savedSettings = {
         ...defaultSettings,
-        refreshInterval: 120,
+        soundNotifications: true,
         darkMode: true,
-        autoRefresh: false,
       };
 
       mockLocalStorage.getItem.mockReturnValue(JSON.stringify(savedSettings));
@@ -205,9 +200,10 @@ describe('SettingsContext', () => {
         </SettingsProvider>
       );
 
-      expect(screen.getByTestId('refresh-interval')).toHaveTextContent('120');
+      expect(screen.getByTestId('sound-notifications')).toHaveTextContent(
+        'true'
+      );
       expect(screen.getByTestId('dark-mode')).toHaveTextContent('true');
-      expect(screen.getByTestId('auto-refresh')).toHaveTextContent('false');
       expect(mockClassList.add).toHaveBeenCalledWith('dark');
     });
 
@@ -222,7 +218,9 @@ describe('SettingsContext', () => {
       );
 
       // Should fall back to defaults
-      expect(screen.getByTestId('refresh-interval')).toHaveTextContent('300');
+      expect(screen.getByTestId('sound-notifications')).toHaveTextContent(
+        'false'
+      );
       expect(Logger.error).toHaveBeenCalledWith(
         'Failed to load settings:',
         expect.any(Error)
@@ -231,7 +229,7 @@ describe('SettingsContext', () => {
 
     test('should merge saved settings with defaults for missing fields', () => {
       const partialSettings = {
-        refreshInterval: 180,
+        soundNotifications: true,
         darkMode: true,
         // Missing other fields
       };
@@ -244,9 +242,10 @@ describe('SettingsContext', () => {
         </SettingsProvider>
       );
 
-      expect(screen.getByTestId('refresh-interval')).toHaveTextContent('180');
+      expect(screen.getByTestId('sound-notifications')).toHaveTextContent(
+        'true'
+      );
       expect(screen.getByTestId('dark-mode')).toHaveTextContent('true');
-      expect(screen.getByTestId('auto-refresh')).toHaveTextContent('true'); // Should use default
     });
   });
 
@@ -259,18 +258,22 @@ describe('SettingsContext', () => {
       );
 
       // Make changes and save them first
-      fireEvent.click(screen.getByTestId('update-refresh-interval'));
+      fireEvent.click(screen.getByTestId('toggle-sound-notifications'));
       fireEvent.click(screen.getByTestId('toggle-dark-mode'));
       fireEvent.click(screen.getByTestId('save-settings'));
 
-      expect(screen.getByTestId('refresh-interval')).toHaveTextContent('600');
+      expect(screen.getByTestId('sound-notifications')).toHaveTextContent(
+        'true'
+      );
       expect(screen.getByTestId('dark-mode')).toHaveTextContent('true');
       expect(screen.getByTestId('unsaved-changes')).toHaveTextContent('false');
 
       // Reset
       fireEvent.click(screen.getByTestId('reset-settings'));
 
-      expect(screen.getByTestId('refresh-interval')).toHaveTextContent('300');
+      expect(screen.getByTestId('sound-notifications')).toHaveTextContent(
+        'false'
+      );
       expect(screen.getByTestId('dark-mode')).toHaveTextContent('false');
       expect(screen.getByTestId('unsaved-changes')).toHaveTextContent('true');
     });
@@ -320,14 +323,14 @@ describe('SettingsContext', () => {
         </SettingsProvider>
       );
 
-      fireEvent.click(screen.getByTestId('update-refresh-interval'));
+      fireEvent.click(screen.getByTestId('toggle-sound-notifications'));
       fireEvent.click(screen.getByTestId('save-settings'));
 
       expect(mockDispatchEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'settingsChanged',
           detail: expect.objectContaining({
-            refreshInterval: 600,
+            soundNotifications: true,
           }),
         })
       );
@@ -345,52 +348,6 @@ describe('SettingsContext', () => {
       }).toThrow('useSettings must be used within a SettingsProvider');
 
       console.error = originalError;
-    });
-  });
-
-  describe('Refresh Interval Specific Tests', () => {
-    test('should handle various refresh interval values', () => {
-      const TestRefreshComponent: React.FC = () => {
-        const { settings, updateSetting } = useSettings();
-
-        return (
-          <div>
-            <div data-testid="current-interval">{settings.refreshInterval}</div>
-            <button onClick={() => updateSetting('refreshInterval', 30)}>
-              30s
-            </button>
-            <button onClick={() => updateSetting('refreshInterval', 60)}>
-              1m
-            </button>
-            <button onClick={() => updateSetting('refreshInterval', 300)}>
-              5m
-            </button>
-            <button onClick={() => updateSetting('refreshInterval', 600)}>
-              10m
-            </button>
-          </div>
-        );
-      };
-
-      render(
-        <SettingsProvider>
-          <TestRefreshComponent />
-        </SettingsProvider>
-      );
-
-      expect(screen.getByTestId('current-interval')).toHaveTextContent('300');
-
-      fireEvent.click(screen.getByText('30s'));
-      expect(screen.getByTestId('current-interval')).toHaveTextContent('30');
-
-      fireEvent.click(screen.getByText('1m'));
-      expect(screen.getByTestId('current-interval')).toHaveTextContent('60');
-
-      fireEvent.click(screen.getByText('5m'));
-      expect(screen.getByTestId('current-interval')).toHaveTextContent('300');
-
-      fireEvent.click(screen.getByText('10m'));
-      expect(screen.getByTestId('current-interval')).toHaveTextContent('600');
     });
   });
 });

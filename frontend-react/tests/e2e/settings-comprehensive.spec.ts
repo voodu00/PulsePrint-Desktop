@@ -99,56 +99,6 @@ test.describe('Settings Comprehensive Testing', () => {
     ).toBeVisible();
   });
 
-  test('should toggle system settings', async ({ page }) => {
-    await navigateToSettings(page);
-
-    // Test Auto Refresh
-    await toggleSetting(page, 'Auto Refresh', false);
-
-    // Verify refresh interval dropdown is disabled
-    const refreshDropdown = page
-      .locator('select')
-      .filter({ hasText: '5 minutes' });
-    await expect(refreshDropdown).toBeDisabled();
-
-    await toggleSetting(page, 'Auto Refresh', true);
-    await expect(refreshDropdown).toBeEnabled();
-  });
-
-  test('should change refresh interval', async ({ page }) => {
-    await navigateToSettings(page);
-
-    // Ensure auto refresh is enabled
-    await toggleSetting(page, 'Auto Refresh', true);
-
-    // Test different refresh intervals
-    const refreshDropdown = page.locator('select').first();
-
-    // Change to 15 seconds
-    await refreshDropdown.selectOption('15');
-    await expect(
-      page.locator('text=Automatically refresh printer data every 15 seconds')
-    ).toBeVisible();
-
-    // Change to 1 minute
-    await refreshDropdown.selectOption('60');
-    await expect(
-      page.locator('text=Automatically refresh printer data every 1 minute')
-    ).toBeVisible();
-
-    // Change to 2 minutes
-    await refreshDropdown.selectOption('120');
-    await expect(
-      page.locator('text=Automatically refresh printer data every 2 minutes')
-    ).toBeVisible();
-
-    // Change back to 5 minutes
-    await refreshDropdown.selectOption('300');
-    await expect(
-      page.locator('text=Automatically refresh printer data every 5 minutes')
-    ).toBeVisible();
-  });
-
   test('should show and handle unsaved changes', async ({ page }) => {
     await navigateToSettings(page);
 
@@ -181,7 +131,7 @@ test.describe('Settings Comprehensive Testing', () => {
     // Make several changes
     await toggleSetting(page, 'Show Temperatures', false);
     await toggleSetting(page, 'Dark Mode', true);
-    await toggleSetting(page, 'Auto Refresh', false);
+    await toggleSetting(page, 'Sound Notifications', true);
 
     // Reset settings
     await page.click('button:has-text("Reset")');

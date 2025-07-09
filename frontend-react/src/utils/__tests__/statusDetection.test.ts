@@ -123,18 +123,8 @@ describe('Status Detection and Core Utilities', () => {
   });
 
   describe('Default Settings Validation', () => {
-    test('should have 5-minute refresh interval as default', () => {
-      expect(defaultSettings.refreshInterval).toBe(300); // 5 minutes in seconds
-    });
-
-    test('should have auto refresh enabled by default', () => {
-      expect(defaultSettings.autoRefresh).toBe(true);
-    });
-
     test('should have proper default values for all settings', () => {
       expect(defaultSettings).toEqual({
-        refreshInterval: 300, // 5 minutes
-        autoRefresh: true,
         darkMode: false,
         idleNotifications: false,
         errorNotifications: true,
@@ -207,25 +197,6 @@ describe('Status Detection and Core Utilities', () => {
         conflictingData.hasActiveLayers;
 
       expect(shouldOverrideStatus).toBe(true);
-    });
-  });
-
-  describe('Settings Refresh Interval Formatting', () => {
-    test('should format refresh intervals correctly', () => {
-      const formatRefreshInterval = (seconds: number): string => {
-        if (seconds >= 60) {
-          const minutes = seconds / 60;
-          return minutes === 1 ? '1 minute' : `${minutes} minutes`;
-        }
-        return `${seconds} seconds`;
-      };
-
-      expect(formatRefreshInterval(15)).toBe('15 seconds');
-      expect(formatRefreshInterval(30)).toBe('30 seconds');
-      expect(formatRefreshInterval(60)).toBe('1 minute');
-      expect(formatRefreshInterval(120)).toBe('2 minutes');
-      expect(formatRefreshInterval(300)).toBe('5 minutes'); // Our default
-      expect(formatRefreshInterval(600)).toBe('10 minutes');
     });
   });
 

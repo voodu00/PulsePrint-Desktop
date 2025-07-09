@@ -11,7 +11,6 @@ import {
   Wifi,
   Save,
   RotateCcw,
-  RefreshCw,
   Moon,
   Sun,
   Upload,
@@ -81,15 +80,6 @@ const Settings: React.FC<SettingsProps> = ({ onBack, printerService }) => {
     },
     [printerService]
   );
-
-  // Helper function to format refresh interval
-  const formatRefreshInterval = (seconds: number): string => {
-    if (seconds >= 60) {
-      const minutes = seconds / 60;
-      return minutes === 1 ? '1 minute' : `${minutes} minutes`;
-    }
-    return `${seconds} seconds`;
-  };
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -321,63 +311,6 @@ const Settings: React.FC<SettingsProps> = ({ onBack, printerService }) => {
                 ) : (
                   <Sun className="w-4 h-4 text-yellow-600" />
                 )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* System Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <RefreshCw className="w-5 h-5" />
-              System
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <h3 className="text-sm font-medium">Auto Refresh</h3>
-                <p className="text-sm text-muted-foreground">
-                  Automatically refresh printer data every{' '}
-                  {formatRefreshInterval(settings.refreshInterval)}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={settings.autoRefresh}
-                  onCheckedChange={(checked: boolean) =>
-                    updateSetting('autoRefresh', checked)
-                  }
-                />
-                <Badge variant={settings.autoRefresh ? 'default' : 'secondary'}>
-                  {settings.autoRefresh ? 'Enabled' : 'Disabled'}
-                </Badge>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <h3 className="text-sm font-medium">Refresh Interval</h3>
-                <p className="text-sm text-muted-foreground">
-                  How often to update printer data (in seconds)
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <select
-                  value={settings.refreshInterval}
-                  onChange={e =>
-                    updateSetting('refreshInterval', Number(e.target.value))
-                  }
-                  className="px-3 py-1 border rounded-md bg-background"
-                  disabled={!settings.autoRefresh}
-                >
-                  <option value={15}>15 seconds</option>
-                  <option value={30}>30 seconds</option>
-                  <option value={60}>1 minute</option>
-                  <option value={120}>2 minutes</option>
-                  <option value={300}>5 minutes</option>
-                </select>
               </div>
             </div>
           </CardContent>
