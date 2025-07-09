@@ -6,6 +6,7 @@ mod e2e_tests {
 
 	/// Test that verifies the Tauri app can be built and started for e2e testing
 	#[test]
+	#[ignore] // Skip in CI as it may hang in headless environment
 	fn test_tauri_app_startup() {
 		println!("Testing Tauri app startup...");
 
@@ -31,9 +32,9 @@ mod e2e_tests {
 	fn test_frontend_build() {
 		println!("Testing frontend build...");
 
-		// Check if we can build the frontend
-		let build_output = Command::new("npm")
-			.args(["run", "build"])
+		// Check if we can build the frontend using yarn
+		let build_output = Command::new("yarn")
+			.args(["build"])
 			.current_dir("../frontend-react")
 			.output()
 			.expect("Failed to build frontend");

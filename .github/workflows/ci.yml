@@ -220,3 +220,4 @@ jobs:
         run: |
           cd src-tauri
           cargo test --test integration_tests
+          # Note: e2e_integration tests run in the integration job where frontend build is available
