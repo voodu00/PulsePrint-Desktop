@@ -63,137 +63,14 @@ describe('Settings Component', () => {
     mockLocalStorage.getItem.mockReturnValue(null);
   });
 
-  describe('Refresh Interval Display', () => {
-    test('should display 5-minute default refresh interval correctly', () => {
-      renderSettings();
-
-      // Look for the auto refresh setting
-      expect(screen.getByText('Auto Refresh')).toBeInTheDocument();
-      expect(
-        screen.getByText('Automatically refresh printer data every 5 minutes')
-      ).toBeInTheDocument();
-    });
-
-    test('should format refresh interval display correctly for different values', () => {
-      const savedSettings = {
-        idleNotifications: false,
-        errorNotifications: true,
-        darkMode: false,
-        autoRefresh: true,
-        soundNotifications: false,
-        refreshInterval: 60, // 1 minute
-        showTemperatures: true,
-        showProgress: true,
-        compactView: false,
-      };
-
-      mockLocalStorage.getItem.mockReturnValue(JSON.stringify(savedSettings));
-
-      renderSettings();
-
-      expect(
-        screen.getByText('Automatically refresh printer data every 1 minute')
-      ).toBeInTheDocument();
-    });
-
-    test('should handle seconds display for intervals less than 60 seconds', () => {
-      const savedSettings = {
-        idleNotifications: false,
-        errorNotifications: true,
-        darkMode: false,
-        autoRefresh: true,
-        soundNotifications: false,
-        refreshInterval: 30, // 30 seconds
-        showTemperatures: true,
-        showProgress: true,
-        compactView: false,
-      };
-
-      mockLocalStorage.getItem.mockReturnValue(JSON.stringify(savedSettings));
-
-      renderSettings();
-
-      expect(
-        screen.getByText('Automatically refresh printer data every 30 seconds')
-      ).toBeInTheDocument();
-    });
-
-    test('should handle multiple minutes display', () => {
-      const savedSettings = {
-        idleNotifications: false,
-        errorNotifications: true,
-        darkMode: false,
-        autoRefresh: true,
-        soundNotifications: false,
-        refreshInterval: 600, // 10 minutes
-        showTemperatures: true,
-        showProgress: true,
-        compactView: false,
-      };
-
-      mockLocalStorage.getItem.mockReturnValue(JSON.stringify(savedSettings));
-
-      renderSettings();
-
-      expect(
-        screen.getByText('Automatically refresh printer data every 10 minutes')
-      ).toBeInTheDocument();
-    });
-  });
-
   describe('Settings Interactions', () => {
     test('should render all main settings sections', () => {
       renderSettings();
 
       expect(screen.getByText('Notifications')).toBeInTheDocument();
       expect(screen.getByText('Display')).toBeInTheDocument();
-      expect(screen.getByText('System')).toBeInTheDocument();
       expect(screen.getByText('Data Management')).toBeInTheDocument();
       expect(screen.getByText('Connection')).toBeInTheDocument();
-    });
-
-    test('should show refresh interval dropdown options', () => {
-      renderSettings();
-
-      // Find the refresh interval dropdown
-      const refreshIntervalSelect = screen.getByDisplayValue('5 minutes');
-      expect(refreshIntervalSelect).toBeInTheDocument();
-
-      // Check for all options (they're in the DOM as option elements)
-      expect(screen.getByText('15 seconds')).toBeInTheDocument();
-      expect(screen.getByText('30 seconds')).toBeInTheDocument();
-      expect(screen.getByText('1 minute')).toBeInTheDocument();
-      expect(screen.getByText('2 minutes')).toBeInTheDocument();
-      expect(screen.getByText('5 minutes')).toBeInTheDocument();
-    });
-
-    test('should update refresh interval when dropdown selection changes', () => {
-      renderSettings();
-
-      const refreshIntervalSelect = screen.getByDisplayValue('5 minutes');
-
-      // Change to 1 minute
-      fireEvent.change(refreshIntervalSelect, { target: { value: '60' } });
-
-      // The description should update immediately
-      expect(
-        screen.getByText('Automatically refresh printer data every 1 minute')
-      ).toBeInTheDocument();
-    });
-
-    test('should toggle auto refresh setting', () => {
-      renderSettings();
-
-      // Find all switches and get the auto refresh switch by position
-      const switches = screen.getAllByRole('switch');
-      const autoRefreshSwitch = switches[7]; // Auto refresh is the 8th switch (index 7)
-
-      // Default should be checked (true)
-      expect(autoRefreshSwitch).toBeChecked();
-
-      fireEvent.click(autoRefreshSwitch);
-
-      expect(autoRefreshSwitch).not.toBeChecked();
     });
 
     test('should show and hide unsaved changes indicator', () => {
@@ -204,10 +81,10 @@ describe('Settings Component', () => {
         screen.queryByText('You have unsaved changes')
       ).not.toBeInTheDocument();
 
-      // Make a change
+      // Make a change by toggling dark mode
       const switches = screen.getAllByRole('switch');
-      const autoRefreshSwitch = switches[7]; // Auto refresh switch
-      fireEvent.click(autoRefreshSwitch);
+      const darkModeSwitch = switches[6]; // Dark mode switch
+      fireEvent.click(darkModeSwitch);
 
       // Should show unsaved changes
       expect(screen.getByText('Unsaved Changes')).toBeInTheDocument();
@@ -216,10 +93,10 @@ describe('Settings Component', () => {
     test('should save settings when save button is clicked', async () => {
       renderSettings();
 
-      // Make a change
+      // Make a change by toggling dark mode
       const switches = screen.getAllByRole('switch');
-      const autoRefreshSwitch = switches[7]; // Auto refresh switch
-      fireEvent.click(autoRefreshSwitch);
+      const darkModeSwitch = switches[6]; // Dark mode switch
+      fireEvent.click(darkModeSwitch);
 
       // Save settings - get the first Save Changes button (in header)
       const saveButtons = screen.getAllByText('Save Changes');
@@ -230,7 +107,7 @@ describe('Settings Component', () => {
       await waitFor(() => {
         expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
           'pulseprint-desktop-settings',
-          expect.stringContaining('"autoRefresh":false')
+          expect.stringContaining('"darkMode":true')
         );
       });
 
@@ -241,14 +118,14 @@ describe('Settings Component', () => {
     test('should reset settings when reset button is clicked', () => {
       renderSettings();
 
-      // Find all switches - we need to identify the auto refresh switch by position
+      // Find all switches - we need to identify the dark mode switch by position
       const switches = screen.getAllByRole('switch');
-      // Based on the component structure, the auto refresh switch is the 7th one (index 6)
-      // Order: idle, error, sound, temperatures, progress, compact, dark mode, auto refresh
-      const autoRefreshSwitch = switches[7]; // Auto refresh is the 8th switch (index 7)
+      // Based on the component structure, the dark mode switch is the 6th one (index 6)
+      // Order: idle, error, sound, temperatures, progress, compact, dark mode
+      const darkModeSwitch = switches[6]; // Dark mode is the 7th switch (index 6)
 
       // Make a change by clicking the switch
-      fireEvent.click(autoRefreshSwitch);
+      fireEvent.click(darkModeSwitch);
 
       // Reset settings
       const resetButton = screen.getByText('Reset');
@@ -256,7 +133,7 @@ describe('Settings Component', () => {
 
       // Should be back to default - verify the component renders
       expect(screen.getByText('Settings')).toBeInTheDocument();
-      expect(screen.getByText('Auto Refresh')).toBeInTheDocument();
+      expect(screen.getByText('Dark Mode')).toBeInTheDocument();
     });
   });
 
@@ -369,9 +246,7 @@ describe('Settings Component', () => {
       expect(
         screen.getByRole('heading', { name: /dark mode/i })
       ).toBeInTheDocument();
-      expect(
-        screen.getByRole('heading', { name: /auto refresh/i })
-      ).toBeInTheDocument();
+
       expect(
         screen.getByRole('heading', { name: /sound notifications/i })
       ).toBeInTheDocument();

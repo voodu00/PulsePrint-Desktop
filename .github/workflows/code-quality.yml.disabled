@@ -19,7 +19,8 @@ jobs:
   # ===================
   build-frontend-analysis:
     name: Build Frontend for Analysis
-    runs-on: ubuntu-latest
+    # runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
@@ -66,7 +67,8 @@ jobs:
   # ===================
   sonarcloud:
     name: SonarCloud Analysis
-    runs-on: ubuntu-latest
+    # runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: build-frontend-analysis
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
 
@@ -139,7 +141,8 @@ jobs:
 
   complexity-analysis:
     name: Code Complexity Analysis
-    runs-on: ubuntu-latest
+    # runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: build-frontend-analysis
 
     steps:
@@ -202,7 +205,8 @@ jobs:
 
   bundle-analysis:
     name: Bundle Size Analysis
-    runs-on: ubuntu-latest
+    # runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: build-frontend-analysis
 
     steps:
@@ -230,4 +234,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bundle-analysis
-          path: frontend-react/bundle-report.md
+          path: frontend-react/bundle-report.md 

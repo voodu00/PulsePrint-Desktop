@@ -78,7 +78,7 @@ test.describe('PulsePrint Dashboard', () => {
       page.locator('[data-slot="card-title"]:has-text("Display")')
     ).toBeVisible();
     await expect(
-      page.locator('[data-slot="card-title"]:has-text("System")')
+      page.locator('[data-slot="card-title"]:has-text("Data Management")')
     ).toBeVisible();
 
     // Navigate back to dashboard
@@ -132,9 +132,6 @@ test.describe('PulsePrint Settings', () => {
       page.locator('[data-slot="card-title"]:has-text("Display")')
     ).toBeVisible();
     await expect(
-      page.locator('[data-slot="card-title"]:has-text("System")')
-    ).toBeVisible();
-    await expect(
       page.locator('[data-slot="card-title"]:has-text("Data Management")')
     ).toBeVisible();
     await expect(
@@ -144,7 +141,7 @@ test.describe('PulsePrint Settings', () => {
     // Check for specific settings
     await expect(page.locator('text=Idle Printer Alerts')).toBeVisible();
     await expect(page.locator('text=Show Temperatures')).toBeVisible();
-    await expect(page.locator('text=Auto Refresh')).toBeVisible();
+    await expect(page.locator('text=Dark Mode')).toBeVisible();
   });
 
   test('should be able to interact with settings', async ({ page }) => {

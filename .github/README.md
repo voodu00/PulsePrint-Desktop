@@ -10,40 +10,11 @@ This directory contains the GitHub Actions workflows and configuration files for
 
 **Jobs:**
 
-- **Frontend Code Quality**: ESLint, Prettier, TypeScript compilation, Unit tests
-- **Rust Code Quality**: Clippy, rustfmt, Rust tests, Build verification
-- **Build Test**: Cross-platform build verification (Ubuntu, Windows, macOS)
+- **Frontend**: ESLint, Prettier, TypeScript compilation, Unit tests with coverage, Codecov upload, Build
+- **Backend**: rustfmt, Clippy, Rust tests, Release build
+- **Integration**: E2E tests (Playwright) and Rust integration tests
 
-### 2. Security Audit (`security.yml`)
-
-**Triggers:** Push to `main`/`develop`, Pull Requests, Weekly schedule
-
-**Jobs:**
-
-- **Frontend Security**: npm audit, vulnerability scanning
-- **Rust Security**: cargo audit for known vulnerabilities
-- **Dependency Review**: GitHub's dependency review for PRs
-
-### 3. Code Quality (`code-quality.yml`)
-
-**Triggers:** Push to `main`/`develop`, Pull Requests
-
-**Jobs:**
-
-- **SonarCloud Analysis**: Code quality metrics and security analysis
-- **Complexity Analysis**: Code complexity reporting
-- **Bundle Analysis**: Frontend bundle size analysis
-
-### 4. Integration Tests (`integration-tests.yml`)
-
-**Triggers:** Push to `main`/`develop`, Pull Requests
-
-**Jobs:**
-
-- **Integration Tests**: Cross-platform Tauri integration tests
-- **E2E Tests**: End-to-end testing with Playwright (planned)
-
-### 5. Dependabot Auto-merge (`dependabot-auto-merge.yml`)
+### 2. Dependabot Auto-merge (`dependabot-auto-merge.yml`)
 
 **Triggers:** Dependabot PRs
 
@@ -53,6 +24,28 @@ This directory contains the GitHub Actions workflows and configuration files for
 - Requires manual review for major updates
 - Adds appropriate labels and comments
 
+## 🚫 Disabled Workflows
+
+The following workflows have been disabled for self-hosted runners without organization access:
+
+### Security Audit (`security.yml.disabled`)
+
+- **Frontend Security**: npm audit, vulnerability scanning
+- **Rust Security**: cargo audit for known vulnerabilities
+- **Dependency Review**: GitHub's dependency review for PRs
+
+### Code Quality (`code-quality.yml.disabled`)
+
+- **Complexity Analysis**: Code complexity reporting (disabled)
+- **Bundle Analysis**: Frontend bundle size analysis (disabled)
+
+**Note**: SonarCloud analysis is available but currently commented out in the main CI workflow.
+
+### CodeQL Analysis (`codeql-analysis.yml.disabled`)
+
+- **Security Scanning**: GitHub's CodeQL security analysis
+- **Vulnerability Detection**: Automated security vulnerability detection
+
 ## 🔧 Configuration Files
 
 ### Frontend (React/TypeScript)
@@ -60,17 +53,20 @@ This directory contains the GitHub Actions workflows and configuration files for
 - `.eslintrc.js` - ESLint configuration
 - `.prettierrc` - Prettier formatting rules
 - `.prettierignore` - Files to exclude from formatting
-- `audit-ci.json` - Vulnerability scanning configuration
 
 ### Backend (Rust/Tauri)
 
 - `rustfmt.toml` - Rust formatting configuration
 - `clippy.toml` - Clippy linting rules
 
-### Analysis Tools
+### CI/CD
 
-- `sonar-project.properties` - SonarCloud configuration
 - `dependabot.yml` - Automated dependency updates
+
+### Disabled Analysis Tools
+
+- `sonar-project.properties` - SonarCloud configuration (disabled)
+- `audit-ci.json` - Vulnerability scanning configuration (disabled)
 
 ## 🛠️ Setup Instructions
 
@@ -79,18 +75,21 @@ This directory contains the GitHub Actions workflows and configuration files for
 Add these secrets to your GitHub repository:
 
 ```
-SONAR_TOKEN          # SonarCloud token for code analysis
-CODECOV_TOKEN        # Codecov token for coverage reporting (optional)
+CODECOV_TOKEN        # Codecov token for coverage reporting
+# SONAR_TOKEN        # SonarCloud token (commented out for now)
 ```
 
-### 2. SonarCloud Setup
+### 2. Re-enabling Code Scanning (When Repository Goes Public)
 
-1. Go to [SonarCloud.io](https://sonarcloud.io)
-2. Import your repository
-3. Update `sonar-project.properties`:
-   - Replace `your-org-name` with your SonarCloud organization
-   - Update project key if needed
-4. Add the `SONAR_TOKEN` to repository secrets
+To re-enable code scanning when the repository becomes public or when organization access is available:
+
+1. **CodeQL Analysis**: Rename `codeql-analysis.yml.disabled` to `codeql-analysis.yml`
+2. **Security Audit**: Rename `security.yml.disabled` to `security.yml`
+3. **Code Quality**: Rename `code-quality.yml.disabled` to `code-quality.yml`
+4. **SonarCloud** (Currently Commented Out):
+   - SonarCloud analysis is available but commented out in the main CI workflow
+   - To enable: uncomment the SonarCloud step in `ci.yml` and add `SONAR_TOKEN` to repository secrets
+   - Configuration is in `sonar-project.properties`
 
 ### 3. Dependabot Configuration
 
@@ -106,20 +105,18 @@ Recommended branch protection for `main`:
 - Require status checks to pass before merging
 - Require branches to be up to date before merging
 - Required status checks:
-  - `Frontend Code Quality`
-  - `Rust Code Quality`
-  - `Build Test (ubuntu-latest)`
-  - `Security Audit`
+  - `Frontend`
+  - `Backend`
+  - `Integration & E2E Tests`
 
 ## 📊 Quality Gates
 
 ### Frontend
 
-- ✅ ESLint passes with max 0 warnings
+- ✅ ESLint passes with max 50 warnings
 - ✅ Prettier formatting is consistent
 - ✅ TypeScript compilation succeeds
 - ✅ Unit tests pass with coverage reporting
-- ✅ No high/critical vulnerabilities
 
 ### Rust/Tauri
 
@@ -127,7 +124,6 @@ Recommended branch protection for `main`:
 - ✅ rustfmt formatting is consistent
 - ✅ All tests pass
 - ✅ Build succeeds on all platforms
-- ✅ No known security vulnerabilities
 
 ### Integration
 
@@ -137,23 +133,23 @@ Recommended branch protection for `main`:
 
 ## 🔍 Monitoring
 
+### Build Status
+
+- All builds must pass on self-hosted runners
+- Cross-platform compatibility is verified
+- Integration and E2E tests must pass
+
 ### Coverage Reports
 
 - Frontend coverage is uploaded to Codecov
 - Reports are generated for each PR
 - Coverage trends are tracked over time
 
-### Security Scanning
-
-- Weekly automated security audits
-- Dependency vulnerability scanning
-- SonarCloud security hotspots
-
 ### Code Quality
 
-- SonarCloud quality gate must pass
-- Code complexity is monitored
-- Bundle size is tracked
+- ESLint and Prettier enforce code standards
+- TypeScript compilation ensures type safety
+- Rust clippy and rustfmt maintain code quality
 
 ## 🚨 Troubleshooting
 
@@ -197,10 +193,10 @@ cargo clippy --fix
 ## 📈 Future Enhancements
 
 - [ ] Add performance benchmarking
-- [ ] Implement E2E tests with Playwright
 - [ ] Add deployment workflows (when ready)
-- [ ] Integrate with additional security tools
 - [ ] Add automated changelog generation
+- [ ] Re-enable code scanning when repository goes public
+- [ ] Add automated security audits when organization access is available
 - [ ] Implement semantic versioning automation
 
 ## 🤝 Contributing

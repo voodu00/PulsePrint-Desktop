@@ -16,13 +16,9 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # ===================
-
-  # BUILD JOBS (FIRST)
-  # ===================
-  build-frontend:
-    name: Build Frontend
-    runs-on: ubuntu-latest
+  frontend:
+    name: Frontend
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
@@ -40,140 +36,52 @@ jobs:
           cd frontend-react
           yarn install --frozen-lockfile
 
-      - name: Build frontend
-        run: |
-          cd frontend-react
-          yarn build
-
-      - name: Upload frontend build
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-build
-          path: frontend-react/build/
-          retention-days: 1
-
-      - name: Cache yarn dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/yarn
-            frontend-react/node_modules
-          key: ${{ runner.os }}-yarn-${{ hashFiles('frontend-react/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-
-
-  build-rust:
-    name: Build Rust
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev \
-            build-essential \
-            curl \
-            wget \
-            file \
-            libxdo-dev \
-            libssl-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-
-      - name: Cache Rust dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            src-tauri/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Build Rust (release)
-        run: |
-          cd src-tauri
-          cargo build --release
-
-      - name: Upload Rust build
-        uses: actions/upload-artifact@v4
-        with:
-          name: rust-build
-          path: src-tauri/target/release/
-          retention-days: 1
-
-  # ===================
-  # QUALITY JOBS (DEPEND ON BUILDS)
-  # ===================
-  frontend-quality:
-    name: Frontend Quality Checks
-    runs-on: ubuntu-latest
-    needs: build-frontend
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'yarn'
-          cache-dependency-path: frontend-react/yarn.lock
-
-      - name: Restore yarn cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/yarn
-            frontend-react/node_modules
-          key: ${{ runner.os }}-yarn-${{ hashFiles('frontend-react/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-
-
-      - name: Install dependencies (if needed)
-        run: |
-          cd frontend-react
-          yarn install --frozen-lockfile --prefer-offline
-
-      - name: Run ESLint
+      - name: Lint (ESLint)
         run: |
           cd frontend-react
           yarn eslint src --ext .ts,.tsx --max-warnings 50
 
-      - name: Run Prettier check
+      - name: Format check (Prettier)
         run: |
           cd frontend-react
           yarn prettier --check "src/**/*.{ts,tsx,js,jsx,json,css,md}"
 
-      - name: TypeScript compilation check
+      - name: Type check (TypeScript)
         run: |
           cd frontend-react
           yarn tsc --noEmit
 
-      - name: Run tests
+      - name: Test with coverage
         run: |
           cd frontend-react
           yarn test --watchAll=false --coverage
 
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v4
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
         with:
-          file: ./frontend-react/coverage/lcov.info
-          flags: frontend
-          name: frontend-coverage
+          token: ${{ secrets.CODECOV_TOKEN }}
 
-  rust-quality:
-    name: Rust Quality Checks
-    runs-on: ubuntu-latest
-    needs: build-rust
+      # - name: SonarCloud Scan
+      #   uses: SonarSource/sonarcloud-github-action@v2.3.0
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Build
+        run: |
+          cd frontend-react
+          yarn build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend-react/build/
+          retention-days: 1
+
+  backend:
+    name: Backend
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
@@ -181,21 +89,54 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev \
-            build-essential \
-            curl \
-            wget \
-            file \
-            libxdo-dev \
-            libssl-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev
+          # Install required GTK and WebKit dependencies for Tauri
+          echo "Checking and installing system dependencies for Tauri..."
+
+          # Check if key packages are already installed
+          if pkg-config --exists gtk+-3.0 && pkg-config --exists webkit2gtk-4.1; then
+            echo "GTK and WebKit dependencies already installed"
+          else
+            echo "Installing missing dependencies..."
+            sudo apt-get update || echo "Could not update package list"
+            sudo apt-get install -y \
+              libwebkit2gtk-4.1-dev \
+              libgtk-3-dev \
+              libayatana-appindicator3-dev \
+              libxdo-dev \
+              libssl-dev \
+              librsvg2-dev \
+              build-essential \
+              curl \
+              wget \
+              file \
+              patchelf \
+              pkg-config \
+              libglib2.0-dev \
+              libcairo2-dev \
+              libpango1.0-dev \
+              libatk1.0-dev \
+              libgdk-pixbuf-2.0-dev \
+              libsoup-3.0-dev \
+              libjavascriptcoregtk-4.1-dev || echo "Could not install some dependencies"
+          fi
+
+          # Verify key packages are installed
+          echo "Verifying GTK packages..."
+          dpkg -l | grep -E "(libgtk|libwebkit|libglib)" | head -10 || echo "Some GTK packages may not be installed"
+
+          # Check pkg-config can find GTK
+          pkg-config --exists gtk+-3.0 && echo "GTK+-3.0 found" || echo "GTK+-3.0 not found"
+          pkg-config --exists webkit2gtk-4.1 && echo "WebKit2GTK found" || echo "WebKit2GTK not found"
+
+          # Set environment variables for pkg-config if needed
+          export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig:$PKG_CONFIG_PATH"
+          echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+          targets: x86_64-unknown-linux-gnu
 
       - name: Cache Rust dependencies
         uses: actions/cache@v4
@@ -206,95 +147,33 @@ jobs:
             src-tauri/target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Run Clippy
-        run: |
-          cd src-tauri
-          cargo clippy --all-targets --all-features
-
-      - name: Check formatting
+      - name: Format check (rustfmt)
         run: |
           cd src-tauri
           cargo fmt --all -- --check
 
-      - name: Run tests
+      - name: Lint (Clippy)
         run: |
           cd src-tauri
-          cargo test
+          cargo clippy --all-targets --all-features -- -D warnings
 
-  # ===================
-  # CROSS-PLATFORM RUST BUILDS (PARALLEL WITH FRONTEND)
-  # ===================
-  build-rust-cross-platform:
-    name: Build Rust Cross-Platform
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            name: Linux
-          - os: windows-latest
-            name: Windows
-          - os: macos-latest
-            name: macOS
-    runs-on: ${{ matrix.os }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Linux dependencies
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev \
-            build-essential \
-            curl \
-            wget \
-            file \
-            libxdo-dev \
-            libssl-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Rust dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            src-tauri/target/
-          key: ${{ matrix.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Build Rust (release)
+      - name: Test
         run: |
           cd src-tauri
+          cargo test --verbose --lib --bins
+          # Skip integration tests that require frontend build
+
+      - name: Build (release)
+        run: |
+          cd src-tauri
+          # Clean build cache to avoid GLIBC version conflicts
+          cargo clean
           cargo build --release
 
-      - name: Upload Rust build
-        uses: actions/upload-artifact@v4
-        with:
-          name: rust-build-${{ matrix.os }}
-          path: src-tauri/target/release/
-          retention-days: 1
-
-  # ===================
-  # CROSS-PLATFORM TAURI BUILDS (DEPEND ON BOTH BUILDS)
-  # ===================
-  cross-platform-build:
-    name: Cross-Platform Tauri Build
-    needs: [build-frontend, build-rust-cross-platform]
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            name: Linux
-          - os: windows-latest
-            name: Windows
-          - os: macos-latest
-            name: macOS
-    runs-on: ${{ matrix.os }}
+  integration:
+    name: Integration & E2E Tests
+    runs-on: self-hosted
+    needs: [frontend, backend]
 
     steps:
       - name: Checkout code
@@ -313,151 +192,62 @@ jobs:
           name: frontend-build
           path: frontend-react/build/
 
-      - name: Download Rust build
-        uses: actions/download-artifact@v4
-        with:
-          name: rust-build-${{ matrix.os }}
-          path: src-tauri/target/release/
-
-      - name: Install Linux dependencies
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev \
-            build-essential \
-            curl \
-            wget \
-            file \
-            libxdo-dev \
-            libssl-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Rust dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            src-tauri/target/
-          key: ${{ matrix.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli --locked
-
-      - name: Build Tauri application
-        run: |
-          cd src-tauri
-          # Use pre-built Rust binary and frontend build
-          cargo tauri build --no-bundle --config '{"build":{"beforeBuildCommand":""}}'
-
-  # ===================
-  # INTEGRATION & E2E TESTS (DEPEND ON BUILDS)
-  # ===================
-  integration-tests:
-    name: Integration Tests
-    needs: [build-frontend, build-rust-cross-platform]
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            name: Linux
-          - os: windows-latest
-            name: Windows
-          - os: macos-latest
-            name: macOS
-    runs-on: ${{ matrix.os }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Linux dependencies
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev \
-            build-essential \
-            curl \
-            wget \
-            file \
-            libxdo-dev \
-            libssl-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Download Rust build
-        uses: actions/download-artifact@v4
-        with:
-          name: rust-build-${{ matrix.os }}
-          path: src-tauri/target/release/
-
-      - name: Cache Rust dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            src-tauri/target/
-          key: ${{ matrix.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Run Tauri integration tests
-        run: |
-          cd src-tauri
-          cargo test --test integration_tests
-
-  e2e-tests:
-    name: E2E Tests (Playwright)
-    needs: build-frontend
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'yarn'
-          cache-dependency-path: frontend-react/yarn.lock
-
-      - name: Download frontend build
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-build
-          path: frontend-react/build/
-
-      - name: Restore yarn cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/yarn
-            frontend-react/node_modules
-          key: ${{ runner.os }}-yarn-${{ hashFiles('frontend-react/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-
-
-      - name: Install dependencies (if needed)
+      - name: Install frontend dependencies
         run: |
           cd frontend-react
-          yarn install --frozen-lockfile --prefer-offline
+          yarn install --frozen-lockfile
 
       - name: Install Playwright browsers
         run: |
           cd frontend-react
+          # Debug: Check current user and sudo permissions
+          echo "Current user: $(whoami)"
+          echo "Current UID: $(id -u)"
+          echo "Testing sudo without password..."
+          sudo -n whoami && echo "Sudo works!" || echo "Sudo requires password"
+
+          # Try Playwright installation
           yarn playwright install --with-deps
+
+      - name: Start React development server
+        run: |
+          cd frontend-react
+          # Start the React dev server in the background
+          yarn dev &
+          DEV_SERVER_PID=$!
+          echo "DEV_SERVER_PID=$DEV_SERVER_PID" >> $GITHUB_ENV
+
+          # Wait for the server to be ready
+          echo "Waiting for React dev server to start..."
+          for i in {1..30}; do
+            if curl -s http://localhost:3000 > /dev/null; then
+              echo "React dev server is ready!"
+              break
+            fi
+            echo "Waiting for server... ($i/30)"
+            sleep 2
+          done
+
+          # Verify server is responding
+          if ! curl -s http://localhost:3000 > /dev/null; then
+            echo "React dev server failed to start"
+            exit 1
+          fi
 
       - name: Run E2E tests
         run: |
           cd frontend-react
           yarn test:e2e
+
+      - name: Stop React development server
+        if: always()
+        run: |
+          # Kill the development server
+          if [ ! -z "$DEV_SERVER_PID" ]; then
+            kill $DEV_SERVER_PID || true
+          fi
+          # Also kill any remaining node processes
+          pkill -f "react-scripts start" || true
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
@@ -466,3 +256,63 @@ jobs:
           name: playwright-report
           path: frontend-react/playwright-report/
           retention-days: 30
+
+      - name: Install system dependencies (for Rust integration tests)
+        run: |
+          # Install required GTK and WebKit dependencies for Tauri
+          echo "Checking and installing system dependencies for Tauri integration tests..."
+
+          # Check if key packages are already installed
+          if pkg-config --exists gtk+-3.0 && pkg-config --exists webkit2gtk-4.1; then
+            echo "GTK and WebKit dependencies already installed"
+          else
+            echo "Installing missing dependencies..."
+            sudo apt-get update || echo "Could not update package list"
+            sudo apt-get install -y \
+              libwebkit2gtk-4.1-dev \
+              libgtk-3-dev \
+              libayatana-appindicator3-dev \
+              libxdo-dev \
+              libssl-dev \
+              librsvg2-dev \
+              build-essential \
+              curl \
+              wget \
+              file \
+              patchelf \
+              pkg-config \
+              libglib2.0-dev \
+              libcairo2-dev \
+              libpango1.0-dev \
+              libatk1.0-dev \
+              libgdk-pixbuf-2.0-dev \
+              libsoup-3.0-dev \
+              libjavascriptcoregtk-4.1-dev || echo "Could not install some dependencies"
+          fi
+
+          # Set environment variables for pkg-config
+          export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig:$PKG_CONFIG_PATH"
+          echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run Rust integration tests
+        run: |
+          cd src-tauri
+          cargo test --test integration_tests
+
+      - name: Run Rust E2E integration tests
+        run: |
+          cd src-tauri
+          # Run the e2e integration tests that require frontend build
+          cargo test --test e2e_integration --verbose

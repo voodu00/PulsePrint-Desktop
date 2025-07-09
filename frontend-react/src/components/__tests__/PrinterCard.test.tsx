@@ -284,8 +284,6 @@ describe('PrinterCard Component', () => {
       mockLocalStorage.getItem.mockReturnValue(
         JSON.stringify({
           showTemperatures: true,
-          refreshInterval: 300,
-          autoRefresh: true,
           darkMode: false,
           idleNotifications: false,
           errorNotifications: true,
@@ -315,8 +313,6 @@ describe('PrinterCard Component', () => {
       mockLocalStorage.getItem.mockReturnValue(
         JSON.stringify({
           showTemperatures: false,
-          refreshInterval: 300,
-          autoRefresh: true,
           darkMode: false,
           idleNotifications: false,
           errorNotifications: true,
@@ -345,8 +341,6 @@ describe('PrinterCard Component', () => {
       mockLocalStorage.getItem.mockReturnValue(
         JSON.stringify({
           showTemperatures: true,
-          refreshInterval: 300,
-          autoRefresh: true,
           darkMode: false,
           idleNotifications: false,
           errorNotifications: true,
@@ -379,8 +373,6 @@ describe('PrinterCard Component', () => {
       mockLocalStorage.getItem.mockReturnValue(
         JSON.stringify({
           showProgress: true,
-          refreshInterval: 300,
-          autoRefresh: true,
           darkMode: false,
           idleNotifications: false,
           errorNotifications: true,
@@ -413,8 +405,6 @@ describe('PrinterCard Component', () => {
       mockLocalStorage.getItem.mockReturnValue(
         JSON.stringify({
           showProgress: false,
-          refreshInterval: 300,
-          autoRefresh: true,
           darkMode: false,
           idleNotifications: false,
           errorNotifications: true,
