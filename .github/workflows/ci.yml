@@ -57,11 +57,9 @@ jobs:
           yarn test --watchAll=false --coverage
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
-          file: ./frontend-react/coverage/lcov.info
-          flags: frontend
-          name: frontend-coverage
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       # - name: SonarCloud Scan
       #   uses: SonarSource/sonarcloud-github-action@v2.3.0
@@ -91,21 +89,37 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          # Check if dependencies are already installed, install if needed
-          if ! dpkg -l | grep -q libwebkit2gtk-4.1-dev; then
-            sudo apt-get update || echo "Could not update package list"
-            sudo apt-get install -y libwebkit2gtk-4.1-dev \
-              build-essential \
-              curl \
-              wget \
-              file \
-              libxdo-dev \
-              libssl-dev \
-              libayatana-appindicator3-dev \
-              librsvg2-dev || echo "Could not install some dependencies"
-          else
-            echo "System dependencies already installed"
-          fi
+          # Install required GTK and WebKit dependencies for Tauri
+          echo "Installing system dependencies for Tauri..."
+          sudo apt-get update || echo "Could not update package list"
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            libxdo-dev \
+            libssl-dev \
+            librsvg2-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            patchelf \
+            pkg-config \
+            libglib2.0-dev \
+            libcairo2-dev \
+            libpango1.0-dev \
+            libatk1.0-dev \
+            libgdk-pixbuf-2.0-dev \
+            libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev || echo "Could not install some dependencies, continuing anyway"
+
+          # Verify key packages are installed
+          echo "Verifying GTK packages..."
+          dpkg -l | grep -E "(libgtk|libwebkit|libglib)" | head -10 || echo "Some GTK packages may not be installed"
+
+          # Check pkg-config can find GTK
+          pkg-config --exists gtk+-3.0 && echo "GTK+-3.0 found" || echo "GTK+-3.0 not found"
+          pkg-config --exists webkit2gtk-4.1 && echo "WebKit2GTK found" || echo "WebKit2GTK not found"
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -189,21 +203,28 @@ jobs:
 
       - name: Install system dependencies (for Rust integration tests)
         run: |
-          # Check if dependencies are already installed, install if needed
-          if ! dpkg -l | grep -q libwebkit2gtk-4.1-dev; then
-            sudo apt-get update || echo "Could not update package list"
-            sudo apt-get install -y libwebkit2gtk-4.1-dev \
-              build-essential \
-              curl \
-              wget \
-              file \
-              libxdo-dev \
-              libssl-dev \
-              libayatana-appindicator3-dev \
-              librsvg2-dev || echo "Could not install some dependencies"
-          else
-            echo "System dependencies already installed"
-          fi
+          # Install required GTK and WebKit dependencies for Tauri
+          sudo apt-get update || echo "Could not update package list"
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            libxdo-dev \
+            libssl-dev \
+            librsvg2-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            patchelf \
+            pkg-config \
+            libglib2.0-dev \
+            libcairo2-dev \
+            libpango1.0-dev \
+            libatk1.0-dev \
+            libgdk-pixbuf-2.0-dev \
+            libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev || echo "Could not install some dependencies, continuing anyway"
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
