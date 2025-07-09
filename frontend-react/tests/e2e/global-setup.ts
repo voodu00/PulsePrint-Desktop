@@ -13,8 +13,30 @@ async function globalSetup(config: FullConfig) {
   const page = await browser.newPage();
 
   try {
-    // Navigate to the app
-    await page.goto('http://localhost:3000');
+    // Wait for the development server to be ready
+    console.log('⏳ Waiting for development server to be ready...');
+    let serverReady = false;
+    const maxRetries = 30;
+
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        await page.goto('http://localhost:3000', {
+          waitUntil: 'networkidle',
+          timeout: 5000,
+        });
+        serverReady = true;
+        console.log('✅ Development server is ready!');
+        break;
+      } catch (error) {
+        console.log(`⏳ Waiting for server... (${i + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+
+    if (!serverReady) {
+      console.warn('⚠️ Development server not ready, tests may fail');
+      return;
+    }
 
     // Inject the mock script
     await page.addInitScript(mockScript);
@@ -31,6 +53,8 @@ async function globalSetup(config: FullConfig) {
     }
   } catch (error) {
     console.error('❌ Error during global setup:', error);
+    // Don't fail the setup, just warn
+    console.warn('⚠️ Global setup failed, but tests will continue');
   } finally {
     await browser.close();
   }

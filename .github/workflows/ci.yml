@@ -209,10 +209,45 @@ jobs:
           # Try Playwright installation
           yarn playwright install --with-deps
 
+      - name: Start React development server
+        run: |
+          cd frontend-react
+          # Start the React dev server in the background
+          yarn dev &
+          DEV_SERVER_PID=$!
+          echo "DEV_SERVER_PID=$DEV_SERVER_PID" >> $GITHUB_ENV
+
+          # Wait for the server to be ready
+          echo "Waiting for React dev server to start..."
+          for i in {1..30}; do
+            if curl -s http://localhost:3000 > /dev/null; then
+              echo "React dev server is ready!"
+              break
+            fi
+            echo "Waiting for server... ($i/30)"
+            sleep 2
+          done
+
+          # Verify server is responding
+          if ! curl -s http://localhost:3000 > /dev/null; then
+            echo "React dev server failed to start"
+            exit 1
+          fi
+
       - name: Run E2E tests
         run: |
           cd frontend-react
           yarn test:e2e
+
+      - name: Stop React development server
+        if: always()
+        run: |
+          # Kill the development server
+          if [ ! -z "$DEV_SERVER_PID" ]; then
+            kill $DEV_SERVER_PID || true
+          fi
+          # Also kill any remaining node processes
+          pkill -f "react-scripts start" || true
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
