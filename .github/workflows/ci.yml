@@ -22,7 +22,8 @@ jobs:
   # ===================
   build-frontend:
     name: Build Frontend
-    runs-on: ubuntu-latest
+    # runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
@@ -64,7 +65,8 @@ jobs:
 
   build-rust:
     name: Build Rust
-    runs-on: ubuntu-latest
+    # runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
@@ -114,7 +116,8 @@ jobs:
   # ===================
   frontend-quality:
     name: Frontend Quality Checks
-    runs-on: ubuntu-latest
+    # runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: build-frontend
 
     steps:
@@ -172,7 +175,8 @@ jobs:
 
   rust-quality:
     name: Rust Quality Checks
-    runs-on: ubuntu-latest
+    # runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: build-rust
 
     steps:
@@ -235,7 +239,8 @@ jobs:
             name: Windows
           - os: macos-latest
             name: macOS
-    runs-on: ${{ matrix.os }}
+    # runs-on: ${{ matrix.os }}
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
@@ -294,7 +299,8 @@ jobs:
             name: Windows
           - os: macos-latest
             name: macOS
-    runs-on: ${{ matrix.os }}
+    # runs-on: ${{ matrix.os }}
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
@@ -369,7 +375,8 @@ jobs:
             name: Windows
           - os: macos-latest
             name: macOS
-    runs-on: ${{ matrix.os }}
+    # runs-on: ${{ matrix.os }}
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
@@ -415,7 +422,8 @@ jobs:
   e2e-tests:
     name: E2E Tests (Playwright)
     needs: build-frontend
-    runs-on: ubuntu-latest
+    # runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
