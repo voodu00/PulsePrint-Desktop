@@ -10,7 +10,7 @@ This directory contains the GitHub Actions workflows and configuration files for
 
 **Jobs:**
 
-- **Frontend**: ESLint, Prettier, TypeScript compilation, Unit tests with coverage, Build
+- **Frontend**: ESLint, Prettier, TypeScript compilation, Unit tests with coverage, Codecov upload, Build
 - **Backend**: rustfmt, Clippy, Rust tests, Release build
 - **Integration**: E2E tests (Playwright) and Rust integration tests
 
@@ -36,9 +36,10 @@ The following workflows have been disabled for self-hosted runners without organ
 
 ### Code Quality (`code-quality.yml.disabled`)
 
-- **SonarCloud Analysis**: Code quality metrics and security analysis
-- **Complexity Analysis**: Code complexity reporting
-- **Bundle Analysis**: Frontend bundle size analysis
+- **Complexity Analysis**: Code complexity reporting (disabled)
+- **Bundle Analysis**: Frontend bundle size analysis (disabled)
+
+**Note**: SonarCloud analysis is available but currently commented out in the main CI workflow.
 
 ### CodeQL Analysis (`codeql-analysis.yml.disabled`)
 
@@ -61,7 +62,6 @@ The following workflows have been disabled for self-hosted runners without organ
 ### CI/CD
 
 - `dependabot.yml` - Automated dependency updates
-- `ci-old.yml` - Backup of previous complex workflow
 
 ### Disabled Analysis Tools
 
@@ -76,6 +76,7 @@ Add these secrets to your GitHub repository:
 
 ```
 CODECOV_TOKEN        # Codecov token for coverage reporting
+# SONAR_TOKEN        # SonarCloud token (commented out for now)
 ```
 
 ### 2. Re-enabling Code Scanning (When Repository Goes Public)
@@ -85,13 +86,10 @@ To re-enable code scanning when the repository becomes public or when organizati
 1. **CodeQL Analysis**: Rename `codeql-analysis.yml.disabled` to `codeql-analysis.yml`
 2. **Security Audit**: Rename `security.yml.disabled` to `security.yml`
 3. **Code Quality**: Rename `code-quality.yml.disabled` to `code-quality.yml`
-4. **SonarCloud Setup**:
-   - Go to [SonarCloud.io](https://sonarcloud.io)
-   - Import your repository
-   - Update `sonar-project.properties`
-   - Add the `SONAR_TOKEN` to repository secrets
-5. **Additional SonarCloud Integration**:
-   - Add `SONAR_TOKEN` to repository secrets for SonarCloud analysis
+4. **SonarCloud** (Currently Commented Out):
+   - SonarCloud analysis is available but commented out in the main CI workflow
+   - To enable: uncomment the SonarCloud step in `ci.yml` and add `SONAR_TOKEN` to repository secrets
+   - Configuration is in `sonar-project.properties`
 
 ### 3. Dependabot Configuration
 
@@ -115,7 +113,7 @@ Recommended branch protection for `main`:
 
 ### Frontend
 
-- ✅ ESLint passes with max 0 warnings
+- ✅ ESLint passes with max 50 warnings
 - ✅ Prettier formatting is consistent
 - ✅ TypeScript compilation succeeds
 - ✅ Unit tests pass with coverage reporting

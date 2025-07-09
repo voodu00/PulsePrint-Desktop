@@ -63,6 +63,12 @@ jobs:
           flags: frontend
           name: frontend-coverage
 
+      # - name: SonarCloud Scan
+      #   uses: SonarSource/sonarcloud-github-action@v2.3.0
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
       - name: Build
         run: |
           cd frontend-react
@@ -123,7 +129,7 @@ jobs:
       - name: Test
         run: |
           cd src-tauri
-          cargo test
+          cargo test --verbose
 
       - name: Build (release)
         run: |
