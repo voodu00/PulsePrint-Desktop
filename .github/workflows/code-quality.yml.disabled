@@ -1,0 +1,237 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+  pull-requests: write
+  security-events: write
+
+jobs:
+  # ===================
+  # BUILD FOR ANALYSIS
+  # ===================
+  build-frontend-analysis:
+    name: Build Frontend for Analysis
+    # runs-on: ubuntu-latest
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+          cache-dependency-path: frontend-react/yarn.lock
+
+      - name: Install dependencies
+        run: |
+          cd frontend-react
+          yarn install --frozen-lockfile
+
+      - name: Build application
+        run: |
+          cd frontend-react
+          # Set CI=false to prevent treating warnings as errors for bundle analysis
+          CI=false yarn build
+
+      - name: Upload frontend build
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build-analysis
+          path: frontend-react/build/
+          retention-days: 1
+
+      - name: Cache yarn dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/yarn
+            frontend-react/node_modules
+          key: ${{ runner.os }}-yarn-analysis-${{ hashFiles('frontend-react/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-analysis-
+            ${{ runner.os }}-yarn-
+
+  # ===================
+  # ANALYSIS JOBS (DEPEND ON BUILD)
+  # ===================
+  sonarcloud:
+    name: SonarCloud Analysis
+    # runs-on: ubuntu-latest
+    runs-on: self-hosted
+    needs: build-frontend-analysis
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Shallow clones should be disabled for better analysis
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+          cache-dependency-path: frontend-react/yarn.lock
+
+      - name: Restore yarn cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/yarn
+            frontend-react/node_modules
+          key: ${{ runner.os }}-yarn-analysis-${{ hashFiles('frontend-react/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-analysis-
+            ${{ runner.os }}-yarn-
+
+      - name: Install dependencies (if needed)
+        run: |
+          cd frontend-react
+          yarn install --frozen-lockfile --prefer-offline
+
+      - name: Run frontend tests with coverage
+        run: |
+          cd frontend-react
+          yarn test --coverage --watchAll=false
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Run Rust tests
+        run: |
+          cd src-tauri
+          cargo test --verbose
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2.3.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  complexity-analysis:
+    name: Code Complexity Analysis
+    # runs-on: ubuntu-latest
+    runs-on: self-hosted
+    needs: build-frontend-analysis
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+          cache-dependency-path: frontend-react/yarn.lock
+
+      - name: Restore yarn cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/yarn
+            frontend-react/node_modules
+          key: ${{ runner.os }}-yarn-analysis-${{ hashFiles('frontend-react/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-analysis-
+            ${{ runner.os }}-yarn-
+
+      - name: Install dependencies (if needed)
+        run: |
+          cd frontend-react
+          yarn install --frozen-lockfile --prefer-offline
+
+      - name: Run ESLint complexity analysis
+        run: |
+          cd frontend-react
+          # Run ESLint with complexity rules to generate a complexity report
+          yarn eslint src --ext .ts,.tsx --format json --output-file complexity-report.json || true
+
+          # Create a readable complexity summary
+          echo "# Code Complexity Analysis" > complexity-summary.md
+          echo "## TypeScript/React Files Analyzed" >> complexity-summary.md
+          find src -name "*.ts" -o -name "*.tsx" | wc -l >> complexity-summary.md
+          echo "" >> complexity-summary.md
+          echo "## File Count by Type" >> complexity-summary.md
+          echo "### TypeScript files:" >> complexity-summary.md
+          find src -name "*.ts" | wc -l >> complexity-summary.md
+          echo "### React TSX files:" >> complexity-summary.md
+          find src -name "*.tsx" | wc -l >> complexity-summary.md
+          echo "" >> complexity-summary.md
+          echo "## Lines of Code" >> complexity-summary.md
+          find src -name "*.ts" -o -name "*.tsx" -exec wc -l {} + | tail -n 1 >> complexity-summary.md
+          echo "" >> complexity-summary.md
+          echo "## ESLint Analysis" >> complexity-summary.md
+          echo "See complexity-report.json for detailed ESLint analysis" >> complexity-summary.md
+
+      - name: Upload complexity reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: complexity-analysis
+          path: |
+            frontend-react/complexity-report.json
+            frontend-react/complexity-summary.md
+
+  bundle-analysis:
+    name: Bundle Size Analysis
+    # runs-on: ubuntu-latest
+    runs-on: self-hosted
+    needs: build-frontend-analysis
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download frontend build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build-analysis
+          path: frontend-react/build/
+
+      - name: Analyze bundle size
+        run: |
+          cd frontend-react
+          # Create a simple bundle analysis report
+          echo "# Bundle Size Analysis" > bundle-report.md
+          echo "## Build Output" >> bundle-report.md
+          ls -la build/static/js/ >> bundle-report.md
+          echo "## File Sizes" >> bundle-report.md
+          du -h build/static/js/*.js >> bundle-report.md || echo "No JS files found" >> bundle-report.md
+          du -h build/static/css/*.css >> bundle-report.md || echo "No CSS files found" >> bundle-report.md
+
+      - name: Upload bundle analysis
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-analysis
+          path: frontend-react/bundle-report.md 
