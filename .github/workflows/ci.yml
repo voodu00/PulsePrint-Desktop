@@ -200,6 +200,13 @@ jobs:
       - name: Install Playwright browsers
         run: |
           cd frontend-react
+          # Debug: Check current user and sudo permissions
+          echo "Current user: $(whoami)"
+          echo "Current UID: $(id -u)"
+          echo "Testing sudo without password..."
+          sudo -n whoami && echo "Sudo works!" || echo "Sudo requires password"
+
+          # Try Playwright installation
           yarn playwright install --with-deps
 
       - name: Run E2E tests
