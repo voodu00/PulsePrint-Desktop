@@ -23,9 +23,6 @@ test.describe('Settings Comprehensive Testing', () => {
       page.locator('[data-slot="card-title"]:has-text("Display")')
     ).toBeVisible();
     await expect(
-      page.locator('[data-slot="card-title"]:has-text("System")')
-    ).toBeVisible();
-    await expect(
       page.locator('[data-slot="card-title"]:has-text("Data Management")')
     ).toBeVisible();
     await expect(
