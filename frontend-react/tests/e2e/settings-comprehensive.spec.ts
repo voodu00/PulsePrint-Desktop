@@ -126,19 +126,27 @@ test.describe('Settings Comprehensive Testing', () => {
 
     // Change to 15 seconds
     await refreshDropdown.selectOption('15');
-    await expect(page.locator('text=Current: 15 seconds')).toBeVisible();
+    await expect(
+      page.locator('text=Automatically refresh printer data every 15 seconds')
+    ).toBeVisible();
 
     // Change to 1 minute
     await refreshDropdown.selectOption('60');
-    await expect(page.locator('text=Current: 1 minute')).toBeVisible();
+    await expect(
+      page.locator('text=Automatically refresh printer data every 1 minute')
+    ).toBeVisible();
 
     // Change to 2 minutes
     await refreshDropdown.selectOption('120');
-    await expect(page.locator('text=Current: 2 minutes')).toBeVisible();
+    await expect(
+      page.locator('text=Automatically refresh printer data every 2 minutes')
+    ).toBeVisible();
 
     // Change back to 5 minutes
     await refreshDropdown.selectOption('300');
-    await expect(page.locator('text=Current: 5 minutes')).toBeVisible();
+    await expect(
+      page.locator('text=Automatically refresh printer data every 5 minutes')
+    ).toBeVisible();
   });
 
   test('should show and handle unsaved changes', async ({ page }) => {
