@@ -235,10 +235,10 @@ jobs:
         include:
           - os: ubuntu-latest
             name: Linux
-          - os: windows-latest
-            name: Windows
-          - os: macos-latest
-            name: macOS
+          # - os: windows-latest
+          #   name: Windows
+          # - os: macos-latest
+          #   name: macOS
     # runs-on: ${{ matrix.os }}
     runs-on: self-hosted
 
