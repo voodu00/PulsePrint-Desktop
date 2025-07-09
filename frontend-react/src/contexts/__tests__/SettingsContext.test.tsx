@@ -289,7 +289,7 @@ describe('SettingsContext', () => {
 
       expect(screen.getByTestId('unsaved-changes')).toHaveTextContent('false');
 
-      fireEvent.click(screen.getByTestId('update-refresh-interval'));
+      fireEvent.click(screen.getByTestId('toggle-sound-notifications'));
       expect(screen.getByTestId('unsaved-changes')).toHaveTextContent('true');
 
       fireEvent.click(screen.getByTestId('save-settings'));

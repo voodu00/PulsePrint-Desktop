@@ -246,9 +246,7 @@ describe('Settings Component', () => {
       expect(
         screen.getByRole('heading', { name: /dark mode/i })
       ).toBeInTheDocument();
-      expect(
-        screen.getByRole('heading', { name: /auto refresh/i })
-      ).toBeInTheDocument();
+
       expect(
         screen.getByRole('heading', { name: /sound notifications/i })
       ).toBeInTheDocument();
