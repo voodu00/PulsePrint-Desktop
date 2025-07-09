@@ -178,22 +178,13 @@ beforeEach(() => {
   localStorageMock.getItem.mockImplementation((key: string) => {
     if (key === 'pulseprint-desktop-settings') {
       return JSON.stringify({
-        notifications: {
-          idlePrinterAlerts: true,
-          printCompleteAlerts: true,
-          errorAlerts: true,
-        },
-        display: {
-          showTemperatures: true,
-          showProgress: true,
-          showFilament: true,
-          darkMode: false,
-        },
-        system: {
-          autoRefresh: true,
-          refreshInterval: 300,
-          enableLogging: false,
-        },
+        idleNotifications: false,
+        errorNotifications: true,
+        darkMode: false,
+        soundNotifications: false,
+        showTemperatures: true,
+        showProgress: true,
+        compactView: false,
       });
     }
     return null;
