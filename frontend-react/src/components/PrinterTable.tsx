@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   Printer,
   Thermometer,
@@ -27,6 +27,110 @@ interface PrinterTableProps {
   onResume: (printerId: string) => void;
   onStop: (printerId: string) => void;
 }
+
+// Individual row component to handle status change animations
+const PrinterTableRow: React.FC<{
+  printer: PrinterType;
+  settings: any;
+  onPause: (printerId: string) => void;
+  onResume: (printerId: string) => void;
+  onStop: (printerId: string) => void;
+  getStatusIcon: (status: string) => React.JSX.Element;
+  getStatusBadgeClass: (status: string) => string;
+  renderProgressCell: (printer: PrinterType) => React.JSX.Element;
+  renderFilamentCell: (printer: PrinterType) => React.JSX.Element;
+  renderTemperatureCell: (printer: PrinterType) => React.JSX.Element;
+  renderActionButtons: (printer: PrinterType) => React.JSX.Element;
+}> = ({
+  printer,
+  settings,
+  onPause,
+  onResume,
+  onStop,
+  getStatusIcon,
+  getStatusBadgeClass,
+  renderProgressCell,
+  renderFilamentCell,
+  renderTemperatureCell,
+  renderActionButtons,
+}) => {
+  // Track previous status to detect changes
+  const previousStatusRef = useRef<string>(printer.status);
+
+  // Determine if row should flash based on current status and settings
+  const shouldFlashIdle =
+    settings.idleNotifications && printer.status === 'idle';
+  const shouldFlashError =
+    settings.errorNotifications && printer.status === 'error';
+
+  // Update the ref for next comparison
+  useEffect(() => {
+    previousStatusRef.current = printer.status;
+  }, [printer.status]);
+
+  // Build the row class names
+  const rowClasses = [
+    'border-b',
+    'border-gray-100',
+    'dark:border-gray-800',
+    'hover:bg-gray-50',
+    'dark:hover:bg-gray-900/50',
+    'transition-colors',
+  ];
+
+  // Add flash classes if needed
+  if (shouldFlashIdle) {
+    rowClasses.push('printer-table-row-idle-flash');
+  } else if (shouldFlashError) {
+    rowClasses.push('printer-table-row-error-flash');
+  }
+
+  return (
+    <tr
+      key={printer.id}
+      className={rowClasses.join(' ')}
+      data-testid={`printer-row-${printer.id}`}
+    >
+      <td className="py-4 px-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Printer className="w-4 h-4 text-muted-foreground" />
+            <span className="font-medium">{printer.name}</span>
+          </div>
+          {printer.model && (
+            <div className="text-xs text-muted-foreground">{printer.model}</div>
+          )}
+          {printer.ip && (
+            <div className="text-xs text-muted-foreground">{printer.ip}</div>
+          )}
+        </div>
+      </td>
+      <td className="py-4 px-4">
+        <div className="flex items-center gap-2">
+          <span
+            className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(
+              printer.status
+            )}`}
+          >
+            {getStatusIcon(printer.status)}
+            {printer.status.charAt(0).toUpperCase() + printer.status.slice(1)}
+          </span>
+        </div>
+        {printer.error && (
+          <div className="mt-1 text-xs text-red-600 dark:text-red-400">
+            {printer.error.message}
+          </div>
+        )}
+      </td>
+      <td className="py-4 px-4">{renderProgressCell(printer)}</td>
+      <td className="py-4 px-4">{renderFilamentCell(printer)}</td>
+      {settings.showTemperatures && (
+        <td className="py-4 px-4">{renderTemperatureCell(printer)}</td>
+      )}
+      <td className="py-4 px-4">{renderActionButtons(printer)}</td>
+    </tr>
+  );
+};
 
 const PrinterTable: React.FC<PrinterTableProps> = ({
   printers,
@@ -109,27 +213,27 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
             </div>
           )}
         </div>
+        {/* Time remaining directly under progress bar */}
+        {printer.print.timeRemaining > 0 && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Clock className="w-3 h-3" />
+            <span>{formatTime(printer.print.timeRemaining)} remaining</span>
+          </div>
+        )}
         {printer.print.fileName && (
           <div className="text-xs text-muted-foreground truncate max-w-[200px]">
             📄 {printer.print.fileName}
           </div>
         )}
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          {printer.print.layerCurrent > 0 && printer.print.layerTotal > 0 && (
-            <div className="flex items-center gap-1">
-              <Layers className="w-3 h-3" />
-              <span>
-                {printer.print.layerCurrent}/{printer.print.layerTotal}
-              </span>
-            </div>
-          )}
-          {printer.print.timeRemaining > 0 && (
-            <div className="flex items-center gap-1">
-              <Clock className="w-3 h-3" />
-              <span>{formatTime(printer.print.timeRemaining)} left</span>
-            </div>
-          )}
-        </div>
+        {/* Layer information */}
+        {printer.print.layerCurrent > 0 && printer.print.layerTotal > 0 && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Layers className="w-3 h-3" />
+            <span>
+              Layer {printer.print.layerCurrent}/{printer.print.layerTotal}
+            </span>
+          </div>
+        )}
       </div>
     );
   };
@@ -277,17 +381,6 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
     );
   };
 
-  const getFlashClasses = (printer: PrinterType) => {
-    const classes = [];
-    if (settings.idleNotifications && printer.status === 'idle') {
-      classes.push('printer-table-row-idle-flash');
-    }
-    if (settings.errorNotifications && printer.status === 'error') {
-      classes.push('printer-table-row-error-flash');
-    }
-    return classes.join(' ');
-  };
-
   if (printers.length === 0) {
     return (
       <div className="text-center py-8">
@@ -329,54 +422,20 @@ const PrinterTable: React.FC<PrinterTableProps> = ({
         </thead>
         <tbody>
           {printers.map(printer => (
-            <tr
+            <PrinterTableRow
               key={printer.id}
-              className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors ${getFlashClasses(printer)}`}
-              data-testid={`printer-row-${printer.id}`}
-            >
-              <td className="py-4 px-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Printer className="w-4 h-4 text-muted-foreground" />
-                    <span className="font-medium">{printer.name}</span>
-                  </div>
-                  {printer.model && (
-                    <div className="text-xs text-muted-foreground">
-                      {printer.model}
-                    </div>
-                  )}
-                  {printer.ip && (
-                    <div className="text-xs text-muted-foreground">
-                      {printer.ip}
-                    </div>
-                  )}
-                </div>
-              </td>
-              <td className="py-4 px-4">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(
-                      printer.status
-                    )}`}
-                  >
-                    {getStatusIcon(printer.status)}
-                    {printer.status.charAt(0).toUpperCase() +
-                      printer.status.slice(1)}
-                  </span>
-                </div>
-                {printer.error && (
-                  <div className="mt-1 text-xs text-red-600 dark:text-red-400">
-                    {printer.error.message}
-                  </div>
-                )}
-              </td>
-              <td className="py-4 px-4">{renderProgressCell(printer)}</td>
-              <td className="py-4 px-4">{renderFilamentCell(printer)}</td>
-              {settings.showTemperatures && (
-                <td className="py-4 px-4">{renderTemperatureCell(printer)}</td>
-              )}
-              <td className="py-4 px-4">{renderActionButtons(printer)}</td>
-            </tr>
+              printer={printer}
+              settings={settings}
+              onPause={onPause}
+              onResume={onResume}
+              onStop={onStop}
+              getStatusIcon={getStatusIcon}
+              getStatusBadgeClass={getStatusBadgeClass}
+              renderProgressCell={renderProgressCell}
+              renderFilamentCell={renderFilamentCell}
+              renderTemperatureCell={renderTemperatureCell}
+              renderActionButtons={renderActionButtons}
+            />
           ))}
         </tbody>
       </table>

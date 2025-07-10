@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   Printer,
   Thermometer,
@@ -39,6 +39,68 @@ const PrinterCard: React.FC<PrinterCardProps> = ({
   const isPrinting = printer.status === 'printing';
   const isPaused = printer.status === 'paused';
   const isError = printer.status === 'error';
+
+  // Track previous status to detect changes
+  const previousStatusRef = useRef<string>(printer.status);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // Effect to handle status change animations
+  useEffect(() => {
+    const previousStatus = previousStatusRef.current;
+    const currentStatus = printer.status;
+
+    // Only trigger flash animations on status changes, not initial render or same status
+    if (previousStatus !== currentStatus && cardRef.current) {
+      const card = cardRef.current;
+
+      // Remove any existing flash classes
+      card.classList.remove(
+        'printer-card-idle-flash',
+        'printer-card-error-flash'
+      );
+
+      // Add appropriate flash class based on new status and settings
+      if (settings.idleNotifications && currentStatus === 'idle') {
+        // Small delay to ensure class removal takes effect
+        setTimeout(() => {
+          card.classList.add('printer-card-idle-flash');
+        }, 10);
+      } else if (settings.errorNotifications && currentStatus === 'error') {
+        setTimeout(() => {
+          card.classList.add('printer-card-error-flash');
+        }, 10);
+      }
+    }
+
+    // Update the ref for next comparison
+    previousStatusRef.current = currentStatus;
+  }, [printer.status, settings.idleNotifications, settings.errorNotifications]);
+
+  // Effect to handle settings changes for existing idle/error printers
+  useEffect(() => {
+    if (!cardRef.current) {
+      return;
+    }
+
+    const card = cardRef.current;
+
+    // Remove all flash classes first
+    card.classList.remove(
+      'printer-card-idle-flash',
+      'printer-card-error-flash'
+    );
+
+    // Add appropriate flash class based on current status and new settings
+    if (settings.idleNotifications && printer.status === 'idle') {
+      setTimeout(() => {
+        card.classList.add('printer-card-idle-flash');
+      }, 10);
+    } else if (settings.errorNotifications && printer.status === 'error') {
+      setTimeout(() => {
+        card.classList.add('printer-card-error-flash');
+      }, 10);
+    }
+  }, [settings.idleNotifications, settings.errorNotifications, printer.status]);
 
   const getStatusIcon = (status: string) => {
     const iconProps = { className: 'w-3 h-3 mr-1' };
@@ -289,25 +351,12 @@ const PrinterCard: React.FC<PrinterCardProps> = ({
     );
   };
 
-  // Determine flash classes based on settings
-  const getFlashClasses = () => {
-    const classes = [];
-    if (settings.idleNotifications && printer.status === 'idle') {
-      classes.push('printer-card-idle-flash');
-    }
-    if (settings.errorNotifications && printer.status === 'error') {
-      classes.push('printer-card-error-flash');
-    }
-    return classes.join(' ');
-  };
-
   return (
     <div
-      className={`card printer-card status-${
-        printer.status
-      } ${getFlashClasses()}`}
+      className={`card printer-card status-${printer.status}`}
       id={`printer-${printer.id}`}
       data-testid={`printer-card-${printer.id}`}
+      ref={cardRef}
     >
       <div className="card-header">
         <div className="flex items-center justify-between">

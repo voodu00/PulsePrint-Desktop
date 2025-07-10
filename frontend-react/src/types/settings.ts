@@ -10,7 +10,7 @@ export interface SettingsState {
 }
 
 export const defaultSettings: SettingsState = {
-  idleNotifications: false,
+  idleNotifications: true,
   errorNotifications: true,
   darkMode: false,
   soundNotifications: false,

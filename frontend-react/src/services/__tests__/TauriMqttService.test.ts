@@ -7,7 +7,7 @@ jest.mock('@tauri-apps/api/core', () => ({
 }));
 
 jest.mock('@tauri-apps/api/event', () => ({
-  listen: jest.fn(),
+  listen: jest.fn().mockResolvedValue(() => {}), // Return a mock unlisten function
 }));
 
 jest.mock('../../utils/logger', () => ({
@@ -21,15 +21,28 @@ jest.mock('../../utils/logger', () => ({
 describe('TauriMqttService', () => {
   let service: TauriMqttService;
   let mockInvoke: jest.MockedFunction<any>;
+  let mockListen: jest.MockedFunction<any>;
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockInvoke = require('@tauri-apps/api/core').invoke;
+    mockListen = require('@tauri-apps/api/event').listen;
+
+    // Reset the singleton instance
+    (TauriMqttService as any).instance = undefined;
     service = TauriMqttService.getInstance();
   });
 
   afterEach(() => {
-    service.destroy();
+    // Only call destroy if the service was properly initialized
+    try {
+      service.destroy();
+    } catch (error) {
+      // Ignore errors during cleanup
+    }
+
+    // Reset the singleton instance for next test
+    (TauriMqttService as any).instance = undefined;
   });
 
   describe('Printer Status Detection', () => {
@@ -182,7 +195,16 @@ describe('TauriMqttService', () => {
       };
 
       await expect(service.addPrinter(params)).resolves.not.toThrow();
-      expect(mockInvoke).toHaveBeenCalledWith('add_printer', params);
+      expect(mockInvoke).toHaveBeenCalledWith('add_printer', {
+        config: {
+          id: expect.any(String), // UUID will be generated
+          name: 'New Printer',
+          model: 'X1C',
+          ip: '192.168.1.200',
+          access_code: 'newcode',
+          serial: 'NEW001',
+        },
+      });
     });
 
     test('should handle add printer failure', async () => {
@@ -260,13 +282,13 @@ describe('TauriMqttService', () => {
           temperatures: { nozzle: 220, bed: 60, chamber: 35 },
           print: {
             progress: 42.5,
-            fileName: 'awesome_model.3mf',
-            layerCurrent: 150,
-            layerTotal: 350,
-            timeRemaining: 3600,
-            estimatedTotalTime: 8400,
+            file_name: 'awesome_model.3mf',
+            layer_current: 150,
+            layer_total: 350,
+            time_remaining: 3600,
+            estimated_total_time: 8400,
           },
-          lastUpdate: new Date(),
+          last_update: new Date().toISOString(),
           error: null,
         },
       ];
@@ -298,14 +320,14 @@ describe('TauriMqttService', () => {
           temperatures: { nozzle: 25, bed: 25, chamber: 25 },
           print: null,
           error: {
-            printError: 1,
-            errorCode: 12345,
+            print_error: 1,
+            error_code: 12345,
             stage: 3,
             lifecycle: 'printing',
-            gcodeState: 'pause',
+            gcode_state: 'pause',
             message: 'Filament runout detected',
           },
-          lastUpdate: new Date(),
+          last_update: new Date().toISOString(),
         },
       ];
 
@@ -336,7 +358,7 @@ describe('TauriMqttService', () => {
           temperatures: { nozzle: 0, bed: 0, chamber: 0 },
           print: null,
           error: null,
-          lastUpdate: new Date(),
+          last_update: new Date().toISOString(),
         },
       ];
 

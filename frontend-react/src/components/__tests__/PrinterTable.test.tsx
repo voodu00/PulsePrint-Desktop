@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import PrinterTable from '../PrinterTable';
 import { SettingsProvider } from '../../contexts/SettingsContext';
@@ -58,7 +58,7 @@ const mockSettings = (settings: any) => {
     getSettings: jest.fn().mockResolvedValue({
       darkMode: false,
       showTemperatures: true,
-      idleNotifications: false,
+      idleNotifications: true,
       errorNotifications: true,
       showProgress: true,
       viewMode: 'card',
@@ -95,11 +95,11 @@ describe('PrinterTable', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Set up default settings mock
+    // Set up default settings mock - updated to match new defaults
     mockSettings({
       showTemperatures: true,
       showProgress: true,
-      idleNotifications: false,
+      idleNotifications: true,
       errorNotifications: true,
     });
   });
@@ -184,8 +184,8 @@ describe('PrinterTable', () => {
     expect(screen.getByText('Error')).toBeInTheDocument();
   });
 
-  test('does not apply flash classes for idle printers when notifications disabled', () => {
-    // Mock settings with idle notifications disabled
+  test('does not apply flash classes for idle printers when notifications disabled', async () => {
+    // Mock settings with idle notifications explicitly disabled
     mockSettings({
       showTemperatures: true,
       showProgress: true,
@@ -202,10 +202,45 @@ describe('PrinterTable', () => {
     );
 
     const tableRow = screen.getByTestId('printer-row-idle-printer');
-    expect(tableRow).not.toHaveClass('printer-table-row-idle-flash');
+
+    // Wait for settings to load, then check that flash class is not applied
+    await waitFor(() => {
+      expect(tableRow).not.toHaveClass('printer-table-row-idle-flash');
+    });
   });
 
-  test('applies flash classes for error printers when notifications enabled', () => {
+  test('applies flash classes for idle printers when notifications enabled', async () => {
+    // Mock settings with idle notifications enabled
+    mockSettings({
+      showTemperatures: true,
+      showProgress: true,
+      idleNotifications: true,
+      errorNotifications: true,
+    });
+
+    const idlePrinter = {
+      ...mockPrinters[0],
+      status: 'idle' as const,
+    };
+
+    renderWithSettings(
+      <PrinterTable
+        printers={[idlePrinter]}
+        onPause={mockHandlers.onPause}
+        onResume={mockHandlers.onResume}
+        onStop={mockHandlers.onStop}
+      />
+    );
+
+    const tableRow = screen.getByTestId('printer-row-test-printer-1');
+
+    // Wait for settings to load and flash class to be applied
+    await waitFor(() => {
+      expect(tableRow).toHaveClass('printer-table-row-idle-flash');
+    });
+  });
+
+  test('applies flash classes for error printers when notifications enabled', async () => {
     // Mock settings with error notifications enabled
     mockSettings({
       showTemperatures: true,
@@ -214,28 +249,37 @@ describe('PrinterTable', () => {
       errorNotifications: true,
     });
 
-    const errorPrinter: Printer[] = [
-      {
-        ...mockPrinters[0],
-        id: 'error-printer',
-        status: 'error',
-        error: {
-          printError: 1,
-          errorCode: 1001,
-          stage: 0,
-          lifecycle: 'test',
-          gcodeState: 'idle',
-          message: 'Test error',
-        },
+    const errorPrinter = {
+      ...mockPrinters[0],
+      status: 'error' as const,
+      error: {
+        printError: 1,
+        errorCode: 12345,
+        stage: 3,
+        lifecycle: 'printing',
+        gcodeState: 'pause',
+        message: 'Test error',
       },
-    ];
+    };
 
     renderWithSettings(
-      <PrinterTable printers={errorPrinter} {...mockHandlers} />
+      <PrinterTable
+        printers={[errorPrinter]}
+        onPause={mockHandlers.onPause}
+        onResume={mockHandlers.onResume}
+        onStop={mockHandlers.onStop}
+      />
     );
 
-    const tableRow = screen.getByTestId('printer-row-error-printer');
-    expect(tableRow).toHaveClass('printer-table-row-error-flash');
+    const tableRow = screen.getByTestId('printer-row-test-printer-1');
+
+    // Wait for settings to load and flash class to be applied
+    await waitFor(() => {
+      expect(tableRow).toHaveClass('printer-table-row-error-flash');
+    });
+
+    // Verify error message is displayed
+    expect(screen.getByText('Test error')).toBeInTheDocument();
   });
 
   test('does not apply flash classes for printing printers', () => {

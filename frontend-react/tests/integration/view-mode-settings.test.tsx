@@ -1,3 +1,4 @@
+import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { SettingsProvider } from '../../src/contexts/SettingsContext';
@@ -102,9 +103,15 @@ const mockSettings = (viewMode: 'card' | 'table' = 'card') => {
 };
 
 const renderDashboard = () => {
+  const mockOnShowSettings = jest.fn();
+  const mockPrinterService = TauriMqttService.getInstance();
+
   return render(
     <SettingsProvider>
-      <Dashboard />
+      <Dashboard
+        onShowSettings={mockOnShowSettings}
+        printerService={mockPrinterService}
+      />
     </SettingsProvider>
   );
 };
@@ -318,4 +325,4 @@ describe('View Mode Settings Integration', () => {
     // Event listeners should still be active
     expect(mockInstance.removeListener).not.toHaveBeenCalled();
   });
-}); 
+});

@@ -43,7 +43,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   const [settings, setSettings] = useState<SettingsState>({
     darkMode: false,
     showTemperatures: true,
-    idleNotifications: false,
+    idleNotifications: true,
     errorNotifications: true,
     soundNotifications: false,
     showProgress: true,
@@ -55,7 +55,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   const [originalSettings, setOriginalSettings] = useState<SettingsState>({
     darkMode: false,
     showTemperatures: true,
-    idleNotifications: false,
+    idleNotifications: true,
     errorNotifications: true,
     soundNotifications: false,
     showProgress: true,
@@ -78,6 +78,15 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
 
     loadSettings();
   }, [mqttService]);
+
+  // Apply dark mode to document element
+  useEffect(() => {
+    if (settings.darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [settings.darkMode]);
 
   const updateSettings = async (newSettings: Partial<SettingsState>) => {
     const updatedSettings = { ...settings, ...newSettings };

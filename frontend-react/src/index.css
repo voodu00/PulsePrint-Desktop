@@ -366,96 +366,6 @@
     z-index: 2;
   }
 
-  /* Table row flash animations */
-  .printer-table-row-idle-flash {
-    position: relative;
-    animation: table-row-idle-flash 3s ease-in-out infinite;
-  }
-
-  .printer-table-row-idle-flash::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(59, 130, 246, 0.15);
-    opacity: 0;
-    animation: table-row-idle-overlay 3s ease-in-out infinite;
-    pointer-events: none;
-    z-index: 1;
-  }
-
-  @keyframes table-row-idle-flash {
-    0%,
-    100% {
-      transform: scale(1);
-      box-shadow: none;
-    }
-    50% {
-      transform: scale(1.02);
-      box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
-    }
-  }
-
-  @keyframes table-row-idle-overlay {
-    0%,
-    100% {
-      opacity: 0;
-    }
-    50% {
-      opacity: 1;
-    }
-  }
-
-  .printer-table-row-error-flash {
-    position: relative;
-    animation: table-row-error-flash 1.5s ease-in-out infinite;
-  }
-
-  .printer-table-row-error-flash::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(239, 68, 68, 0.2);
-    opacity: 0;
-    animation: table-row-error-overlay 1.5s ease-in-out infinite;
-    pointer-events: none;
-    z-index: 1;
-  }
-
-  @keyframes table-row-error-flash {
-    0%,
-    100% {
-      transform: scale(1);
-      box-shadow: none;
-    }
-    50% {
-      transform: scale(1.03);
-      box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
-    }
-  }
-
-  @keyframes table-row-error-overlay {
-    0%,
-    100% {
-      opacity: 0;
-    }
-    50% {
-      opacity: 1;
-    }
-  }
-
-  /* Ensure table row content is above the overlay */
-  .printer-table-row-idle-flash > *,
-  .printer-table-row-error-flash > * {
-    position: relative;
-    z-index: 2;
-  }
-
   /* View transition animations */
   .view-container {
     position: relative;
@@ -564,6 +474,23 @@
     animation: table-row-fade-in 0.25s ease-out forwards;
   }
 
+  /* Override fade-in for flash rows - they should fade in but not override flash animation */
+  .view-table tbody tr.printer-table-row-idle-flash,
+  .view-table tbody tr.printer-table-row-error-flash {
+    opacity: 1;
+    transform: translateX(0);
+    animation: none; /* Remove fade-in animation */
+  }
+
+  /* Re-apply flash animations after removing fade-in */
+  .view-table tbody tr.printer-table-row-idle-flash {
+    animation: idle-background-flash 3s ease-in-out infinite;
+  }
+
+  .view-table tbody tr.printer-table-row-error-flash {
+    animation: error-background-flash 1.5s ease-in-out infinite;
+  }
+
   .view-table tbody tr:nth-child(1) {
     animation-delay: 0.3s;
   }
@@ -618,5 +545,41 @@
       opacity: 1;
       transform: translateX(0);
     }
+  }
+
+  /* Table row flash animations - simple background color approach */
+  .printer-table-row-idle-flash {
+    animation: idle-background-flash 3s ease-in-out infinite;
+  }
+
+  .printer-table-row-error-flash {
+    animation: error-background-flash 1.5s ease-in-out infinite;
+  }
+
+  @keyframes idle-background-flash {
+    0%,
+    100% {
+      background-color: transparent;
+    }
+    50% {
+      background-color: rgba(59, 130, 246, 0.2);
+    }
+  }
+
+  @keyframes error-background-flash {
+    0%,
+    100% {
+      background-color: transparent;
+    }
+    50% {
+      background-color: rgba(239, 68, 68, 0.2);
+    }
+  }
+
+  /* Hover states */
+  .printer-table-row-idle-flash:hover,
+  .printer-table-row-error-flash:hover {
+    animation-play-state: paused;
+    background-color: rgba(156, 163, 175, 0.1);
   }
 }

@@ -1,7 +1,21 @@
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import Database from '@tauri-apps/plugin-sql';
 import { Printer, PrinterServiceEvent } from '../types/printer';
 import { SettingsState } from '../types/settings';
+
+// Simple UUID v4 generator that works in all environments
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for environments without crypto.randomUUID
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 
 export interface PrinterStatistics {
   total: number;
@@ -17,6 +31,7 @@ export class TauriMqttService {
   private listeners: ((printers: Printer[]) => void)[] = [];
   private eventListeners: ((event: PrinterServiceEvent) => void)[] = [];
   private db: Database | null = null;
+  private unlistenFunctions: (() => void)[] = [];
 
   private constructor() {}
 
@@ -102,7 +117,17 @@ export class TauriMqttService {
 
   // Printer management methods
   async connectPrinter(config: any): Promise<void> {
-    await invoke('add_printer', config);
+    // Ensure the config object matches the backend PrinterConfig struct
+    const formattedConfig = {
+      id: config.id || generateUUID(), // Generate ID if not provided
+      name: config.name,
+      model: config.model || '',
+      ip: config.ip,
+      access_code: config.accessCode || config.access_code, // Handle both camelCase and snake_case
+      serial: config.serial,
+    };
+
+    await invoke('add_printer', { config: formattedConfig });
   }
 
   async disconnectPrinter(printerId: string): Promise<void> {
@@ -118,7 +143,17 @@ export class TauriMqttService {
     accessCode: string;
     serial: string;
   }): Promise<void> {
-    await invoke('add_printer', printer);
+    // Create a config object that matches the backend PrinterConfig struct
+    const config = {
+      id: generateUUID(), // Generate a unique ID
+      name: printer.name,
+      model: printer.model || '', // Ensure model is not undefined
+      ip: printer.ip,
+      access_code: printer.accessCode, // Convert from camelCase to snake_case
+      serial: printer.serial,
+    };
+
+    await invoke('add_printer', { config });
     // Get updated printer list and notify
     const printers = await this.getPrinters();
     this.notifyEventListeners({ type: 'printer_added', data: printers });
@@ -136,14 +171,64 @@ export class TauriMqttService {
     await invoke('send_printer_command', { printerId, command });
   }
 
+  // Helper method to convert backend printer data to frontend format
+  private convertBackendPrinterToFrontend(backendPrinter: any): Printer {
+    const converted: any = {
+      ...backendPrinter,
+      lastUpdate: new Date(
+        backendPrinter.last_update || backendPrinter.lastUpdate || Date.now()
+      ),
+    };
+
+    // Convert print object field names from snake_case to camelCase
+    if (backendPrinter.print) {
+      converted.print = {
+        progress: backendPrinter.print.progress,
+        fileName: backendPrinter.print.file_name,
+        layerCurrent: backendPrinter.print.layer_current,
+        layerTotal: backendPrinter.print.layer_total,
+        timeRemaining: backendPrinter.print.time_remaining,
+        estimatedTotalTime: backendPrinter.print.estimated_total_time,
+      };
+    }
+
+    // Convert filament object field names if needed
+    if (backendPrinter.filament) {
+      converted.filament = {
+        type: backendPrinter.filament.type || backendPrinter.filament['r#type'],
+        color: backendPrinter.filament.color,
+        remaining: backendPrinter.filament.remaining,
+      };
+    }
+
+    // Convert error object field names if needed
+    if (backendPrinter.error) {
+      converted.error = {
+        printError: backendPrinter.error.print_error,
+        errorCode: backendPrinter.error.error_code,
+        stage: backendPrinter.error.stage,
+        lifecycle: backendPrinter.error.lifecycle,
+        gcodeState: backendPrinter.error.gcode_state,
+        message: backendPrinter.error.message,
+      };
+    }
+
+    return converted as Printer;
+  }
+
   async getPrinters(): Promise<Printer[]> {
     try {
-      const printers = await invoke<Printer[]>('get_all_printers');
-      if (Array.isArray(printers)) {
-        printers.forEach(printer => {
+      const backendPrinters = await invoke<any[]>('get_all_printers');
+      if (Array.isArray(backendPrinters)) {
+        const frontendPrinters = backendPrinters.map(printer =>
+          this.convertBackendPrinterToFrontend(printer)
+        );
+
+        frontendPrinters.forEach(printer => {
           this.printers.set(printer.id, printer);
         });
-        return printers;
+
+        return frontendPrinters;
       }
       return [];
     } catch (error) {
@@ -204,6 +289,35 @@ export class TauriMqttService {
   // Initialize the service
   async initialize(): Promise<void> {
     try {
+      // Set up real-time event listeners for MQTT updates
+      const unlistenPrinterUpdate = await listen('printer-update', event => {
+        const backendPrinter = event.payload as any;
+        const frontendPrinter =
+          this.convertBackendPrinterToFrontend(backendPrinter);
+
+        // Update local state
+        this.printers.set(frontendPrinter.id, frontendPrinter);
+
+        // Notify listeners
+        this.notifyListeners();
+        this.notifyEventListeners({ type: 'updated', data: frontendPrinter });
+      });
+
+      const unlistenPrinterRemoved = await listen('printer-removed', event => {
+        const printerId = event.payload as string;
+        this.printers.delete(printerId);
+
+        // Notify listeners
+        this.notifyListeners();
+        this.notifyEventListeners({ type: 'printer_removed', data: [] });
+      });
+
+      // Store unlisten functions for cleanup
+      this.unlistenFunctions.push(
+        unlistenPrinterUpdate,
+        unlistenPrinterRemoved
+      );
+
       // Get current printers from backend
       const printers = await this.getPrinters();
 
@@ -233,11 +347,15 @@ export class TauriMqttService {
     return this.printers.get(id);
   }
 
-  // Clean up
   destroy(): void {
-    this.printers.clear();
     this.listeners = [];
     this.eventListeners = [];
+    this.printers.clear();
+
+    // Clean up event listeners
+    this.unlistenFunctions.forEach(unlisten => unlisten());
+    this.unlistenFunctions = [];
+
     if (this.db) {
       this.db.close();
       this.db = null;

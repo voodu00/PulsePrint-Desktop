@@ -126,7 +126,7 @@ describe('Status Detection and Core Utilities', () => {
     test('should have proper default values for all settings', () => {
       expect(defaultSettings).toEqual({
         darkMode: false,
-        idleNotifications: false,
+        idleNotifications: true,
         errorNotifications: true,
         soundNotifications: false,
         showTemperatures: true,

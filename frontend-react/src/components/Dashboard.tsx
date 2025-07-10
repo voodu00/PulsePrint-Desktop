@@ -53,36 +53,76 @@ const Dashboard: React.FC<DashboardProps> = ({
     (event: PrinterServiceEvent) => {
       switch (event.type) {
         case 'initialized':
-        case 'updated':
         case 'printer_added':
         case 'printer_removed':
-          // For all these events, the data contains the updated printer list
+          // For these events, the data contains the updated printer list
           const printerList = Array.isArray(event.data)
             ? event.data
             : [event.data];
           setPrinters(printerList);
-          setStatistics(printerService.getStatistics());
           setLastUpdate(new Date());
 
           if (event.type === 'initialized') {
             setIsLoading(false);
           }
           break;
+        case 'updated':
+          // For updated event, event.data contains just the single updated printer
+          // We need to update that specific printer in the existing list
+          const updatedPrinter = event.data as Printer;
+          setPrinters(prevPrinters => {
+            const newPrinters = prevPrinters.map(printer =>
+              printer.id === updatedPrinter.id ? updatedPrinter : printer
+            );
+            return newPrinters;
+          });
+          setLastUpdate(new Date());
+          break;
         case 'printer_paused':
         case 'printer_resumed':
         case 'printer_stopped':
-          // These events also contain the updated printer list
+          // These events contain the updated printer list
           const updatedPrinters = Array.isArray(event.data)
             ? event.data
             : [event.data];
           setPrinters(updatedPrinters);
-          setStatistics(printerService.getStatistics());
           setLastUpdate(new Date());
           break;
       }
     },
-    [printerService]
+    []
   );
+
+  // Calculate statistics whenever printers change
+  useEffect(() => {
+    const stats = {
+      total: printers.length,
+      online: 0,
+      printing: 0,
+      idle: 0,
+      error: 0,
+    };
+
+    printers.forEach(printer => {
+      switch (printer.status) {
+        case 'printing':
+          stats.printing++;
+          break;
+        case 'idle':
+          stats.idle++;
+          break;
+        case 'error':
+          stats.error++;
+          break;
+        case 'connecting':
+          // Count connecting printers as online
+          stats.online++;
+          break;
+      }
+    });
+
+    setStatistics(stats);
+  }, [printers]);
 
   const handlePause = useCallback(
     async (printerId: string) => {
@@ -158,17 +198,13 @@ const Dashboard: React.FC<DashboardProps> = ({
     setShowImportPrinters(false);
   }, []);
 
-  const handleImportComplete = useCallback(
-    async (result: ImportResult) => {
-      if (result.success && result.imported > 0 && !result.validateOnly) {
-        // No need to refresh - the addPrinter events have already updated the local state
-        // Just update statistics to reflect the new printer count
-        setStatistics(printerService.getStatistics());
-        setLastUpdate(new Date());
-      }
-    },
-    [printerService]
-  );
+  const handleImportComplete = useCallback(async (result: ImportResult) => {
+    if (result.success && result.imported > 0 && !result.validateOnly) {
+      // No need to refresh - the addPrinter events have already updated the local state
+      // Statistics will be automatically updated when printers state changes
+      setLastUpdate(new Date());
+    }
+  }, []);
 
   const handleExportPrinters = useCallback(() => {
     setShowExportPrinters(true);
