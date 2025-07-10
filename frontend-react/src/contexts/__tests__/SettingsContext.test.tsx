@@ -1,339 +1,238 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import { SettingsProvider, useSettings } from '../SettingsContext';
-import { defaultSettings } from '../../types/settings';
 
-// Mock logger
-jest.mock('../../utils/logger', () => ({
-  Logger: {
-    error: jest.fn(),
-  },
-}));
+// Mock the TauriMqttService
+jest.mock('../../services/TauriMqttService');
 
-// Test component to interact with settings
 const TestComponent: React.FC = () => {
-  const {
-    settings,
-    updateSetting,
-    resetSettings,
-    hasUnsavedChanges,
-    saveSettings,
-  } = useSettings();
+  const { settings, updateSettings, isLoading } = useSettings();
+
+  if (isLoading) {
+    return <div data-testid="loading">Loading...</div>;
+  }
 
   return (
     <div>
       <div data-testid="dark-mode">{settings.darkMode.toString()}</div>
-      <div data-testid="sound-notifications">
-        {settings.soundNotifications.toString()}
+      <div data-testid="show-temperatures">
+        {settings.showTemperatures.toString()}
       </div>
-      <div data-testid="unsaved-changes">{hasUnsavedChanges.toString()}</div>
-
-      <button
-        data-testid="toggle-sound-notifications"
-        onClick={() =>
-          updateSetting('soundNotifications', !settings.soundNotifications)
-        }
-      >
-        Toggle Sound Notifications
-      </button>
-
+      <div data-testid="idle-notifications">
+        {settings.idleNotifications.toString()}
+      </div>
+      <div data-testid="error-notifications">
+        {settings.errorNotifications.toString()}
+      </div>
+      <div data-testid="view-mode">{settings.viewMode}</div>
       <button
         data-testid="toggle-dark-mode"
-        onClick={() => updateSetting('darkMode', !settings.darkMode)}
+        onClick={() => updateSettings({ darkMode: !settings.darkMode })}
       >
         Toggle Dark Mode
       </button>
-
-      <button data-testid="save-settings" onClick={saveSettings}>
-        Save Settings
+      <button
+        data-testid="toggle-temperatures"
+        onClick={() =>
+          updateSettings({ showTemperatures: !settings.showTemperatures })
+        }
+      >
+        Toggle Temperatures
       </button>
-
-      <button data-testid="reset-settings" onClick={resetSettings}>
-        Reset Settings
+      <button
+        data-testid="toggle-idle-notifications"
+        onClick={() =>
+          updateSettings({ idleNotifications: !settings.idleNotifications })
+        }
+      >
+        Toggle Idle Notifications
+      </button>
+      <button
+        data-testid="toggle-error-notifications"
+        onClick={() =>
+          updateSettings({ errorNotifications: !settings.errorNotifications })
+        }
+      >
+        Toggle Error Notifications
+      </button>
+      <button
+        data-testid="set-table-view"
+        onClick={() => updateSettings({ viewMode: 'table' })}
+      >
+        Set Table View
       </button>
     </div>
   );
 };
 
-// Mock localStorage
-const mockLocalStorage = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  clear: jest.fn(),
-};
-
-Object.defineProperty(window, 'localStorage', {
-  value: mockLocalStorage,
-});
-
-// Mock document.documentElement.classList
-const mockClassList = {
-  add: jest.fn(),
-  remove: jest.fn(),
-  toggle: jest.fn(),
-  contains: jest.fn(),
-};
-
-Object.defineProperty(document.documentElement, 'classList', {
-  value: mockClassList,
-});
-
 describe('SettingsContext', () => {
+  const mockService =
+    require('../../services/TauriMqttService').TauriMqttService.getInstance();
+
   beforeEach(() => {
     jest.clearAllMocks();
-    mockLocalStorage.getItem.mockReturnValue(null);
+
+    // Reset mock to return default settings
+    mockService.getSettings.mockResolvedValue({
+      darkMode: false,
+      showTemperatures: true,
+      idleNotifications: false,
+      errorNotifications: true,
+      viewMode: 'card',
+    });
+
+    mockService.saveSettings.mockResolvedValue(undefined);
   });
 
-  describe('Default Settings', () => {
-    test('should initialize with all default settings', () => {
+  describe('Settings Loading', () => {
+    test('should load settings from database on mount', async () => {
       render(
         <SettingsProvider>
           <TestComponent />
         </SettingsProvider>
       );
 
+      // Should show loading initially
+      expect(screen.getByTestId('loading')).toBeInTheDocument();
+
+      // Wait for settings to load
+      await waitFor(() => {
+        expect(screen.queryByTestId('loading')).not.toBeInTheDocument();
+      });
+
+      // Should show default settings
       expect(screen.getByTestId('dark-mode')).toHaveTextContent('false');
-      expect(screen.getByTestId('sound-notifications')).toHaveTextContent(
+      expect(screen.getByTestId('show-temperatures')).toHaveTextContent('true');
+      expect(screen.getByTestId('idle-notifications')).toHaveTextContent(
         'false'
       );
-      expect(screen.getByTestId('unsaved-changes')).toHaveTextContent('false');
+      expect(screen.getByTestId('error-notifications')).toHaveTextContent(
+        'true'
+      );
+      expect(screen.getByTestId('view-mode')).toHaveTextContent('card');
     });
 
-    test('should verify default settings object has correct values', () => {
-      expect(defaultSettings.darkMode).toBe(false);
-      expect(defaultSettings.idleNotifications).toBe(false);
-      expect(defaultSettings.errorNotifications).toBe(true);
-      expect(defaultSettings.soundNotifications).toBe(false);
-      expect(defaultSettings.showTemperatures).toBe(true);
-      expect(defaultSettings.showProgress).toBe(true);
-      expect(defaultSettings.compactView).toBe(false);
+    test('should handle custom settings from database', async () => {
+      mockService.getSettings.mockResolvedValue({
+        darkMode: true,
+        showTemperatures: false,
+        idleNotifications: true,
+        errorNotifications: false,
+        viewMode: 'table',
+      });
+
+      render(
+        <SettingsProvider>
+          <TestComponent />
+        </SettingsProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('loading')).not.toBeInTheDocument();
+      });
+
+      expect(screen.getByTestId('dark-mode')).toHaveTextContent('true');
+      expect(screen.getByTestId('show-temperatures')).toHaveTextContent(
+        'false'
+      );
+      expect(screen.getByTestId('idle-notifications')).toHaveTextContent(
+        'true'
+      );
+      expect(screen.getByTestId('error-notifications')).toHaveTextContent(
+        'false'
+      );
+      expect(screen.getByTestId('view-mode')).toHaveTextContent('table');
     });
   });
 
   describe('Settings Updates', () => {
-    test('should update sound notifications setting', () => {
+    test('should update settings and save to database', async () => {
       render(
         <SettingsProvider>
           <TestComponent />
         </SettingsProvider>
       );
 
-      expect(screen.getByTestId('sound-notifications')).toHaveTextContent(
-        'false'
-      );
-
-      fireEvent.click(screen.getByTestId('toggle-sound-notifications'));
-
-      expect(screen.getByTestId('sound-notifications')).toHaveTextContent(
-        'true'
-      );
-      expect(screen.getByTestId('unsaved-changes')).toHaveTextContent('true');
-    });
-
-    test('should update dark mode setting', () => {
-      render(
-        <SettingsProvider>
-          <TestComponent />
-        </SettingsProvider>
-      );
-
-      expect(screen.getByTestId('dark-mode')).toHaveTextContent('false');
+      await waitFor(() => {
+        expect(screen.queryByTestId('loading')).not.toBeInTheDocument();
+      });
 
       fireEvent.click(screen.getByTestId('toggle-dark-mode'));
 
-      expect(screen.getByTestId('dark-mode')).toHaveTextContent('true');
-      expect(screen.getByTestId('unsaved-changes')).toHaveTextContent('true');
-    });
+      await waitFor(() => {
+        expect(screen.getByTestId('dark-mode')).toHaveTextContent('true');
+      });
 
-    test('should apply dark mode to document immediately', () => {
-      render(
-        <SettingsProvider>
-          <TestComponent />
-        </SettingsProvider>
-      );
-
-      fireEvent.click(screen.getByTestId('toggle-dark-mode'));
-
-      expect(mockClassList.add).toHaveBeenCalledWith('dark');
-
-      fireEvent.click(screen.getByTestId('toggle-dark-mode'));
-
-      expect(mockClassList.remove).toHaveBeenCalledWith('dark');
-    });
-  });
-
-  describe('Settings Persistence', () => {
-    test('should save settings to localStorage', () => {
-      render(
-        <SettingsProvider>
-          <TestComponent />
-        </SettingsProvider>
-      );
-
-      fireEvent.click(screen.getByTestId('toggle-sound-notifications'));
-      fireEvent.click(screen.getByTestId('save-settings'));
-
-      expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
-        'pulseprint-desktop-settings',
-        JSON.stringify({
-          ...defaultSettings,
-          soundNotifications: true,
-        })
-      );
-
-      expect(screen.getByTestId('unsaved-changes')).toHaveTextContent('false');
-    });
-
-    test('should load settings from localStorage on mount', () => {
-      const savedSettings = {
-        ...defaultSettings,
-        soundNotifications: true,
+      expect(mockService.saveSettings).toHaveBeenCalledWith({
         darkMode: true,
-      };
-
-      mockLocalStorage.getItem.mockReturnValue(JSON.stringify(savedSettings));
-
-      render(
-        <SettingsProvider>
-          <TestComponent />
-        </SettingsProvider>
-      );
-
-      expect(screen.getByTestId('sound-notifications')).toHaveTextContent(
-        'true'
-      );
-      expect(screen.getByTestId('dark-mode')).toHaveTextContent('true');
-      expect(mockClassList.add).toHaveBeenCalledWith('dark');
+        showTemperatures: true,
+        idleNotifications: false,
+        errorNotifications: true,
+        viewMode: 'card',
+      });
     });
 
-    test('should handle corrupted localStorage data gracefully', () => {
-      const Logger = require('../../utils/logger').Logger;
-      mockLocalStorage.getItem.mockReturnValue('invalid json');
-
+    test('should update multiple settings', async () => {
       render(
         <SettingsProvider>
           <TestComponent />
         </SettingsProvider>
       );
 
-      // Should fall back to defaults
-      expect(screen.getByTestId('sound-notifications')).toHaveTextContent(
-        'false'
-      );
-      expect(Logger.error).toHaveBeenCalledWith(
-        'Failed to load settings:',
-        expect.any(Error)
-      );
-    });
-
-    test('should merge saved settings with defaults for missing fields', () => {
-      const partialSettings = {
-        soundNotifications: true,
-        darkMode: true,
-        // Missing other fields
-      };
-
-      mockLocalStorage.getItem.mockReturnValue(JSON.stringify(partialSettings));
-
-      render(
-        <SettingsProvider>
-          <TestComponent />
-        </SettingsProvider>
-      );
-
-      expect(screen.getByTestId('sound-notifications')).toHaveTextContent(
-        'true'
-      );
-      expect(screen.getByTestId('dark-mode')).toHaveTextContent('true');
-    });
-  });
-
-  describe('Settings Reset', () => {
-    test('should reset settings to defaults', () => {
-      render(
-        <SettingsProvider>
-          <TestComponent />
-        </SettingsProvider>
-      );
-
-      // Make changes and save them first
-      fireEvent.click(screen.getByTestId('toggle-sound-notifications'));
-      fireEvent.click(screen.getByTestId('toggle-dark-mode'));
-      fireEvent.click(screen.getByTestId('save-settings'));
-
-      expect(screen.getByTestId('sound-notifications')).toHaveTextContent(
-        'true'
-      );
-      expect(screen.getByTestId('dark-mode')).toHaveTextContent('true');
-      expect(screen.getByTestId('unsaved-changes')).toHaveTextContent('false');
-
-      // Reset
-      fireEvent.click(screen.getByTestId('reset-settings'));
-
-      expect(screen.getByTestId('sound-notifications')).toHaveTextContent(
-        'false'
-      );
-      expect(screen.getByTestId('dark-mode')).toHaveTextContent('false');
-      expect(screen.getByTestId('unsaved-changes')).toHaveTextContent('true');
-    });
-  });
-
-  describe('Unsaved Changes Detection', () => {
-    test('should detect unsaved changes correctly', () => {
-      render(
-        <SettingsProvider>
-          <TestComponent />
-        </SettingsProvider>
-      );
-
-      expect(screen.getByTestId('unsaved-changes')).toHaveTextContent('false');
-
-      fireEvent.click(screen.getByTestId('toggle-sound-notifications'));
-      expect(screen.getByTestId('unsaved-changes')).toHaveTextContent('true');
-
-      fireEvent.click(screen.getByTestId('save-settings'));
-      expect(screen.getByTestId('unsaved-changes')).toHaveTextContent('false');
-    });
-
-    test('should not show unsaved changes when reverting to original value', () => {
-      render(
-        <SettingsProvider>
-          <TestComponent />
-        </SettingsProvider>
-      );
-
-      // Toggle dark mode twice (back to original)
-      fireEvent.click(screen.getByTestId('toggle-dark-mode'));
-      expect(screen.getByTestId('unsaved-changes')).toHaveTextContent('true');
+      await waitFor(() => {
+        expect(screen.queryByTestId('loading')).not.toBeInTheDocument();
+      });
 
       fireEvent.click(screen.getByTestId('toggle-dark-mode'));
-      expect(screen.getByTestId('unsaved-changes')).toHaveTextContent('false');
+
+      await waitFor(() => {
+        expect(screen.getByTestId('dark-mode')).toHaveTextContent('true');
+      });
+
+      fireEvent.click(screen.getByTestId('toggle-temperatures'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('show-temperatures')).toHaveTextContent(
+          'false'
+        );
+      });
+
+      fireEvent.click(screen.getByTestId('set-table-view'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('view-mode')).toHaveTextContent('table');
+      });
+
+      expect(mockService.saveSettings).toHaveBeenCalledTimes(3);
     });
-  });
 
-  describe('Settings Event Dispatch', () => {
-    test('should dispatch custom event when settings are saved', () => {
-      const mockDispatchEvent = jest.fn();
-      window.dispatchEvent = mockDispatchEvent;
-
+    test('should handle partial settings updates', async () => {
       render(
         <SettingsProvider>
           <TestComponent />
         </SettingsProvider>
       );
 
-      fireEvent.click(screen.getByTestId('toggle-sound-notifications'));
-      fireEvent.click(screen.getByTestId('save-settings'));
+      await waitFor(() => {
+        expect(screen.queryByTestId('loading')).not.toBeInTheDocument();
+      });
 
-      expect(mockDispatchEvent).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'settingsChanged',
-          detail: expect.objectContaining({
-            soundNotifications: true,
-          }),
-        })
-      );
+      fireEvent.click(screen.getByTestId('toggle-idle-notifications'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('idle-notifications')).toHaveTextContent(
+          'true'
+        );
+      });
+
+      expect(mockService.saveSettings).toHaveBeenCalledWith({
+        darkMode: false,
+        showTemperatures: true,
+        idleNotifications: true,
+        errorNotifications: true,
+        viewMode: 'card',
+      });
     });
   });
 

@@ -25,6 +25,11 @@
 			"csp": null
 		}
 	},
+	"plugins": {
+		"sql": {
+			"preload": ["sqlite:pulseprint.db"]
+		}
+	},
 	"bundle": {
 		"active": true,
 		"targets": "all",

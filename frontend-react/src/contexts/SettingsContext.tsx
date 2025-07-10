@@ -5,18 +5,20 @@ import React, {
   useEffect,
   ReactNode,
 } from 'react';
-import { SettingsState, defaultSettings } from '../types/settings';
-import { Logger } from '../utils/logger';
+import { SettingsState } from '../types/settings';
+import { TauriMqttService } from '../services/TauriMqttService';
 
 interface SettingsContextType {
   settings: SettingsState;
+  updateSettings: (newSettings: Partial<SettingsState>) => Promise<void>;
   updateSetting: <K extends keyof SettingsState>(
     key: K,
     value: SettingsState[K]
-  ) => void;
-  resetSettings: () => void;
+  ) => Promise<void>;
   hasUnsavedChanges: boolean;
-  saveSettings: () => void;
+  saveSettings: () => Promise<void>;
+  resetSettings: () => Promise<void>;
+  isLoading: boolean;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(
@@ -38,84 +40,83 @@ interface SettingsProviderProps {
 export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   children,
 }) => {
-  const [settings, setSettings] = useState<SettingsState>(defaultSettings);
-  const [savedSettings, setSavedSettings] =
-    useState<SettingsState>(defaultSettings);
+  const [settings, setSettings] = useState<SettingsState>({
+    darkMode: false,
+    showTemperatures: true,
+    idleNotifications: false,
+    errorNotifications: true,
+    soundNotifications: false,
+    showProgress: true,
+    compactView: false,
+    viewMode: 'card',
+  });
+  const [isLoading, setIsLoading] = useState(true);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [originalSettings, setOriginalSettings] = useState<SettingsState>({
+    darkMode: false,
+    showTemperatures: true,
+    idleNotifications: false,
+    errorNotifications: true,
+    soundNotifications: false,
+    showProgress: true,
+    compactView: false,
+    viewMode: 'card',
+  });
 
-  // Load settings from localStorage on mount
+  const mqttService = TauriMqttService.getInstance();
+
   useEffect(() => {
-    const savedSettingsStr = localStorage.getItem(
-      'pulseprint-desktop-settings'
-    );
-    if (savedSettingsStr) {
+    const loadSettings = async () => {
       try {
-        const parsed = JSON.parse(savedSettingsStr);
-        const mergedSettings = { ...defaultSettings, ...parsed };
-        setSettings(mergedSettings);
-        setSavedSettings(mergedSettings);
-        // Apply dark mode immediately on load
-        applyDarkMode(mergedSettings.darkMode);
-      } catch (error) {
-        Logger.error('Failed to load settings:', error);
+        const savedSettings = await mqttService.getSettings();
+        setSettings(savedSettings);
+        setOriginalSettings(savedSettings);
+      } finally {
+        setIsLoading(false);
       }
-    }
-  }, []);
+    };
 
-  // Apply dark mode to document
-  const applyDarkMode = (isDark: boolean) => {
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    loadSettings();
+  }, [mqttService]);
+
+  const updateSettings = async (newSettings: Partial<SettingsState>) => {
+    const updatedSettings = { ...settings, ...newSettings };
+    setSettings(updatedSettings);
+    await mqttService.saveSettings(updatedSettings);
+    setOriginalSettings(updatedSettings);
+    setHasUnsavedChanges(false);
   };
 
-  // Watch for dark mode changes and apply them immediately
-  useEffect(() => {
-    applyDarkMode(settings.darkMode);
-  }, [settings.darkMode]);
-
-  // Check for unsaved changes
-  useEffect(() => {
-    const hasChanges =
-      JSON.stringify(settings) !== JSON.stringify(savedSettings);
-    setHasUnsavedChanges(hasChanges);
-  }, [settings, savedSettings]);
-
-  const updateSetting = <K extends keyof SettingsState>(
+  const updateSetting = async <K extends keyof SettingsState>(
     key: K,
     value: SettingsState[K]
   ) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
+    const updatedSettings = { ...settings, [key]: value };
+    setSettings(updatedSettings);
+    setHasUnsavedChanges(true);
   };
 
-  const saveSettings = () => {
-    localStorage.setItem(
-      'pulseprint-desktop-settings',
-      JSON.stringify(settings)
-    );
-    setSavedSettings(settings);
+  const saveSettings = async () => {
+    await mqttService.saveSettings(settings);
+    setOriginalSettings(settings);
     setHasUnsavedChanges(false);
-
-    // Dispatch custom event to notify other components
-    window.dispatchEvent(
-      new CustomEvent('settingsChanged', { detail: settings })
-    );
   };
 
-  const resetSettings = () => {
-    setSettings(defaultSettings);
+  const resetSettings = async () => {
+    setSettings(originalSettings);
+    setHasUnsavedChanges(false);
   };
 
   return (
     <SettingsContext.Provider
       value={{
         settings,
+        updateSettings,
         updateSetting,
-        resetSettings,
         hasUnsavedChanges,
         saveSettings,
+        resetSettings,
+        isLoading,
       }}
     >
       {children}

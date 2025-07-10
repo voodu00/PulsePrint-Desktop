@@ -132,6 +132,7 @@ describe('Status Detection and Core Utilities', () => {
         showTemperatures: true,
         showProgress: true,
         compactView: false,
+        viewMode: 'card',
       });
     });
   });

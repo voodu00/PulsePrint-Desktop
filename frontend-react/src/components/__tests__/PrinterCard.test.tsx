@@ -1,72 +1,58 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import PrinterCard from '../PrinterCard';
-import { SettingsProvider } from '../../contexts/SettingsContext';
-import { Printer, PrinterStatus, PrintJob } from '../../types/printer';
+import { TauriMqttService } from '../../services/TauriMqttService';
+import { Printer, PrintJob } from '../../types/printer';
 
-// Mock the progress calculation utility
+// Mock the SettingsContext
+const mockSettingsContext = {
+  settings: {
+    darkMode: false,
+    showTemperatures: true,
+    idleNotifications: false,
+    errorNotifications: true,
+    soundNotifications: false,
+    showProgress: true,
+    compactView: false,
+    viewMode: 'card' as const,
+  },
+  updateSettings: jest.fn(),
+  updateSetting: jest.fn(),
+  hasUnsavedChanges: false,
+  saveSettings: jest.fn(),
+  resetSettings: jest.fn(),
+  isLoading: false,
+};
+
+// Mock the useSettings hook
+jest.mock('../../contexts/SettingsContext', () => ({
+  useSettings: () => mockSettingsContext,
+  SettingsProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+// Mock the TauriMqttService
+jest.mock('../../services/TauriMqttService');
+
+// Mock the calculateProgress function
 jest.mock('../../utils/progressCalculation', () => ({
-  calculateProgress: jest
-    .fn()
-    .mockImplementation((printJob: PrintJob | null) => {
-      if (!printJob) {
-        return { progress: 0, source: 'unknown' };
-      }
-
-      // If progress is available and not 0, use it directly
-      if (typeof printJob.progress === 'number' && printJob.progress !== 0) {
-        return {
-          progress: printJob.progress,
-          source: 'direct',
-        };
-      }
-
-      // Otherwise use time-based calculation if available
-      if (printJob.estimatedTotalTime && printJob.timeRemaining) {
-        const elapsed = printJob.estimatedTotalTime - printJob.timeRemaining;
-        const progress = Math.min(
-          100,
-          Math.max(0, (elapsed / printJob.estimatedTotalTime) * 100)
-        );
-        return {
-          progress,
-          source: 'time',
-        };
-      }
-
-      // Otherwise use layer-based calculation if available
-      if (printJob.layerTotal && printJob.layerCurrent) {
-        const progress = Math.min(
-          100,
-          Math.max(0, (printJob.layerCurrent / printJob.layerTotal) * 100)
-        );
-        return {
-          progress,
-          source: 'layer',
-        };
-      }
-
-      return { progress: 0, source: 'unknown' };
-    }),
+  calculateProgress: jest.fn(),
   getProgressSourceDescription: jest
     .fn()
     .mockReturnValue('Direct from printer'),
 }));
 
-// Get the mocked function for use in tests
-const mockCalculateProgress =
-  require('../../utils/progressCalculation').calculateProgress;
+// Get the mocked function
+const mockCalculateProgress = jest.mocked(
+  require('../../utils/progressCalculation').calculateProgress
+);
 
 // Mock the time formatting utility
 jest.mock('../../utils/formatTime', () => ({
-  formatTime: jest.fn(seconds => {
-    if (seconds >= 3600) {
-      const hours = Math.floor(seconds / 3600);
-      const minutes = Math.floor((seconds % 3600) / 60);
-      return `${hours}h ${minutes}m`;
-    }
-    const minutes = Math.floor(seconds / 60);
-    return `${minutes}m`;
+  formatTime: jest.fn().mockImplementation((seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours}h ${minutes}m`;
   }),
 }));
 
@@ -77,18 +63,7 @@ jest.mock('../../utils/logger', () => ({
   },
 }));
 
-// Mock localStorage
-const mockLocalStorage = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  clear: jest.fn(),
-};
-
-Object.defineProperty(window, 'localStorage', {
-  value: mockLocalStorage,
-});
-
+// Helper to create mock printer data
 const createMockPrinter = (overrides: Partial<Printer> = {}): Printer => ({
   id: 'test-printer-1',
   name: 'Test Printer',
@@ -97,15 +72,11 @@ const createMockPrinter = (overrides: Partial<Printer> = {}): Printer => ({
   accessCode: 'test123',
   serial: 'TEST001',
   status: 'idle',
-  temperatures: {
-    nozzle: 25,
-    bed: 25,
-    chamber: 25,
-  },
+  temperatures: { nozzle: 25, bed: 25, chamber: 25 },
   print: null,
   filament: null,
   error: null,
-  lastUpdate: new Date('2024-01-01T12:00:00Z'),
+  lastUpdate: new Date('2024-01-01T06:00:00Z'),
   ...overrides,
 });
 
@@ -117,17 +88,76 @@ const renderPrinterCard = (printer: Printer, handlers = {}) => {
     ...handlers,
   };
 
-  return render(
-    <SettingsProvider>
-      <PrinterCard printer={printer} {...defaultHandlers} />
-    </SettingsProvider>
-  );
+  return render(<PrinterCard printer={printer} {...defaultHandlers} />);
+};
+
+// Helper to mock settings
+const mockSettings = (settings: any) => {
+  Object.assign(mockSettingsContext.settings, {
+    darkMode: false,
+    showTemperatures: true,
+    idleNotifications: false,
+    errorNotifications: true,
+    soundNotifications: false,
+    showProgress: true,
+    compactView: false,
+    viewMode: 'card',
+    ...settings,
+  });
+
+  const mockInstance = {
+    getSettings: jest.fn().mockResolvedValue(mockSettingsContext.settings),
+    saveSettings: jest.fn().mockResolvedValue(undefined),
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+    initialize: jest.fn().mockResolvedValue(undefined),
+    destroy: jest.fn(),
+    getPrinters: jest.fn().mockResolvedValue([]),
+    getAllPrinters: jest.fn().mockReturnValue([]),
+    getPrinter: jest.fn().mockReturnValue(undefined),
+    connectPrinter: jest.fn().mockResolvedValue(undefined),
+    disconnectPrinter: jest.fn().mockResolvedValue(undefined),
+    sendPrintCommand: jest.fn().mockResolvedValue(undefined),
+    pausePrint: jest.fn().mockResolvedValue(undefined),
+    resumePrint: jest.fn().mockResolvedValue(undefined),
+    stopPrint: jest.fn().mockResolvedValue(undefined),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    addPrinter: jest.fn().mockResolvedValue(undefined),
+    removePrinter: jest.fn().mockResolvedValue(undefined),
+    getStatistics: jest.fn().mockReturnValue({
+      total: 0,
+      online: 0,
+      printing: 0,
+      idle: 0,
+      error: 0,
+    }),
+  };
+
+  // Use jest.mocked to properly type the mock
+  const MockedTauriMqttService = jest.mocked(TauriMqttService);
+  MockedTauriMqttService.getInstance = jest
+    .fn()
+    .mockReturnValue(mockInstance as any);
+
+  return mockInstance;
 };
 
 describe('PrinterCard Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockLocalStorage.getItem.mockReturnValue(null);
+
+    // Set up default settings mock
+    mockSettings({
+      showTemperatures: true,
+      showProgress: true,
+      idleNotifications: false,
+      errorNotifications: true,
+      soundNotifications: false,
+      compactView: false,
+      darkMode: false,
+      viewMode: 'card',
+    });
 
     // Reset the calculateProgress mock to ensure it returns proper objects
     mockCalculateProgress.mockImplementation((printJob: PrintJob | null) => {
@@ -281,17 +311,7 @@ describe('PrinterCard Component', () => {
       });
 
       // Mock settings with temperatures enabled
-      mockLocalStorage.getItem.mockReturnValue(
-        JSON.stringify({
-          showTemperatures: true,
-          darkMode: false,
-          idleNotifications: false,
-          errorNotifications: true,
-          soundNotifications: false,
-          showProgress: true,
-          compactView: false,
-        })
-      );
+      mockSettings({ showTemperatures: true });
 
       renderPrinterCard(printer);
 
@@ -310,17 +330,7 @@ describe('PrinterCard Component', () => {
       });
 
       // Mock settings with temperatures disabled
-      mockLocalStorage.getItem.mockReturnValue(
-        JSON.stringify({
-          showTemperatures: false,
-          darkMode: false,
-          idleNotifications: false,
-          errorNotifications: true,
-          soundNotifications: false,
-          showProgress: true,
-          compactView: false,
-        })
-      );
+      mockSettings({ showTemperatures: false });
 
       renderPrinterCard(printer);
 
@@ -338,17 +348,7 @@ describe('PrinterCard Component', () => {
         },
       });
 
-      mockLocalStorage.getItem.mockReturnValue(
-        JSON.stringify({
-          showTemperatures: true,
-          darkMode: false,
-          idleNotifications: false,
-          errorNotifications: true,
-          soundNotifications: false,
-          showProgress: true,
-          compactView: false,
-        })
-      );
+      mockSettings({ showTemperatures: true });
 
       renderPrinterCard(printer);
 
@@ -370,17 +370,7 @@ describe('PrinterCard Component', () => {
         },
       });
 
-      mockLocalStorage.getItem.mockReturnValue(
-        JSON.stringify({
-          showProgress: true,
-          darkMode: false,
-          idleNotifications: false,
-          errorNotifications: true,
-          soundNotifications: false,
-          showTemperatures: true,
-          compactView: false,
-        })
-      );
+      mockSettings({ showProgress: true });
 
       renderPrinterCard(printer);
 
@@ -402,17 +392,7 @@ describe('PrinterCard Component', () => {
         },
       });
 
-      mockLocalStorage.getItem.mockReturnValue(
-        JSON.stringify({
-          showProgress: false,
-          darkMode: false,
-          idleNotifications: false,
-          errorNotifications: true,
-          soundNotifications: false,
-          showTemperatures: true,
-          compactView: false,
-        })
-      );
+      mockSettings({ showProgress: false });
 
       renderPrinterCard(printer);
 
@@ -585,7 +565,7 @@ describe('PrinterCard Component', () => {
 
   describe('Status Icons', () => {
     test('should show correct icon for each status', () => {
-      const statuses: PrinterStatus[] = [
+      const statuses: Printer['status'][] = [
         'idle',
         'printing',
         'paused',

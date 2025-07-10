@@ -9,7 +9,7 @@ type View = 'dashboard' | 'settings';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('dashboard');
-  const [printerService] = useState(() => new TauriMqttService());
+  const [printerService] = useState(() => TauriMqttService.getInstance());
 
   const showSettings = () => setCurrentView('settings');
   const showDashboard = () => setCurrentView('dashboard');

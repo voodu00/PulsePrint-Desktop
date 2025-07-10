@@ -307,7 +307,7 @@ test.describe('Settings Comprehensive Testing', () => {
     await navigateToSettings(page);
 
     // Verify settings are still applied
-    // Note: This test depends on proper localStorage implementation
+    // Note: This test depends on proper database persistence
     await expect(page.locator('h1:has-text("Settings")')).toBeVisible();
   });
 

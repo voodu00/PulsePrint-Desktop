@@ -365,4 +365,258 @@
     position: relative;
     z-index: 2;
   }
+
+  /* Table row flash animations */
+  .printer-table-row-idle-flash {
+    position: relative;
+    animation: table-row-idle-flash 3s ease-in-out infinite;
+  }
+
+  .printer-table-row-idle-flash::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(59, 130, 246, 0.15);
+    opacity: 0;
+    animation: table-row-idle-overlay 3s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  @keyframes table-row-idle-flash {
+    0%,
+    100% {
+      transform: scale(1);
+      box-shadow: none;
+    }
+    50% {
+      transform: scale(1.02);
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+    }
+  }
+
+  @keyframes table-row-idle-overlay {
+    0%,
+    100% {
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  .printer-table-row-error-flash {
+    position: relative;
+    animation: table-row-error-flash 1.5s ease-in-out infinite;
+  }
+
+  .printer-table-row-error-flash::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(239, 68, 68, 0.2);
+    opacity: 0;
+    animation: table-row-error-overlay 1.5s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  @keyframes table-row-error-flash {
+    0%,
+    100% {
+      transform: scale(1);
+      box-shadow: none;
+    }
+    50% {
+      transform: scale(1.03);
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+    }
+  }
+
+  @keyframes table-row-error-overlay {
+    0%,
+    100% {
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  /* Ensure table row content is above the overlay */
+  .printer-table-row-idle-flash > *,
+  .printer-table-row-error-flash > * {
+    position: relative;
+    z-index: 2;
+  }
+
+  /* View transition animations */
+  .view-container {
+    position: relative;
+    min-height: 200px;
+  }
+
+  .view-content {
+    opacity: 0;
+    transform: translateY(20px);
+    animation: view-fade-in 0.4s ease-out forwards;
+  }
+
+  @keyframes view-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Smooth transition for view changes */
+  .view-table {
+    animation-delay: 0.05s;
+  }
+
+  .view-card {
+    animation-delay: 0.05s;
+  }
+
+  /* Enhanced card grid animation */
+  .view-card .grid > * {
+    opacity: 0;
+    transform: translateY(10px);
+    animation: card-fade-in 0.3s ease-out forwards;
+  }
+
+  .view-card .grid > *:nth-child(1) {
+    animation-delay: 0.1s;
+  }
+  .view-card .grid > *:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+  .view-card .grid > *:nth-child(3) {
+    animation-delay: 0.2s;
+  }
+  .view-card .grid > *:nth-child(4) {
+    animation-delay: 0.25s;
+  }
+  .view-card .grid > *:nth-child(5) {
+    animation-delay: 0.3s;
+  }
+  .view-card .grid > *:nth-child(6) {
+    animation-delay: 0.35s;
+  }
+  .view-card .grid > *:nth-child(7) {
+    animation-delay: 0.4s;
+  }
+  .view-card .grid > *:nth-child(8) {
+    animation-delay: 0.45s;
+  }
+
+  @keyframes card-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* View toggle button animations */
+  .view-toggle-button {
+    transition: all 0.2s ease-in-out;
+  }
+
+  .view-toggle-button:hover {
+    transform: translateY(-1px);
+  }
+
+  .view-toggle-button:active {
+    transform: translateY(0);
+  }
+
+  /* Table view specific animations */
+  .view-table .card {
+    opacity: 0;
+    transform: translateY(15px);
+    animation: table-container-fade-in 0.4s ease-out forwards;
+    animation-delay: 0.1s;
+  }
+
+  .view-table table {
+    opacity: 0;
+    animation: table-fade-in 0.3s ease-out forwards;
+    animation-delay: 0.2s;
+  }
+
+  .view-table tbody tr {
+    opacity: 0;
+    transform: translateX(-10px);
+    animation: table-row-fade-in 0.25s ease-out forwards;
+  }
+
+  .view-table tbody tr:nth-child(1) {
+    animation-delay: 0.3s;
+  }
+  .view-table tbody tr:nth-child(2) {
+    animation-delay: 0.35s;
+  }
+  .view-table tbody tr:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+  .view-table tbody tr:nth-child(4) {
+    animation-delay: 0.45s;
+  }
+  .view-table tbody tr:nth-child(5) {
+    animation-delay: 0.5s;
+  }
+  .view-table tbody tr:nth-child(6) {
+    animation-delay: 0.55s;
+  }
+  .view-table tbody tr:nth-child(7) {
+    animation-delay: 0.6s;
+  }
+  .view-table tbody tr:nth-child(8) {
+    animation-delay: 0.65s;
+  }
+
+  @keyframes table-container-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(15px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes table-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes table-row-fade-in {
+    from {
+      opacity: 0;
+      transform: translateX(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
 }

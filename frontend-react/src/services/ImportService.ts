@@ -579,7 +579,7 @@ export class ImportService {
     const format = this.detectFormat(filename, content);
     const validation = await this.parseFile(content, format);
 
-    const existingPrinters = this.printerService.getPrinters();
+    const existingPrinters = await this.printerService.getPrinters();
     const existingSerials = existingPrinters.map(p => p.serial || '');
 
     const duplicateSerials = validation.printers
@@ -638,7 +638,7 @@ export class ImportService {
       };
     }
 
-    const existingPrinters = this.printerService.getPrinters();
+    const existingPrinters = await this.printerService.getPrinters();
     const existingSerials = existingPrinters.map(p => p.serial || '');
 
     let imported = 0;
@@ -657,7 +657,7 @@ export class ImportService {
       try {
         const params: AddPrinterParams = {
           name: printer.name,
-          model: printer.model,
+          model: printer.model || '',
           ip: printer.ip,
           accessCode: printer.accessCode,
           serial: printer.serial,
@@ -694,7 +694,7 @@ export class ImportService {
    */
   async exportPrinters(options: ExportOptions): Promise<ExportResult> {
     try {
-      const printers = this.printerService.getPrinters();
+      const printers = await this.printerService.getPrinters();
       const exportData = printers.map(printer => ({
         name: printer.name,
         model: printer.model || '',
