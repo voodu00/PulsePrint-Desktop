@@ -21,12 +21,10 @@ jest.mock('../../utils/logger', () => ({
 describe('TauriMqttService', () => {
   let service: TauriMqttService;
   let mockInvoke: jest.MockedFunction<any>;
-  let mockListen: jest.MockedFunction<any>;
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockInvoke = require('@tauri-apps/api/core').invoke;
-    mockListen = require('@tauri-apps/api/event').listen;
 
     // Reset the singleton instance
     (TauriMqttService as any).instance = undefined;

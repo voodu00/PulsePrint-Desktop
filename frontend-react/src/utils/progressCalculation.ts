@@ -6,26 +6,22 @@ export interface ProgressCalculation {
 }
 
 /**
- * Calculate print progress with fallback methods
- * Priority: Direct progress (if > 0) > Layer-based > Time-based > Direct progress (if 0) > Estimation
+ * Try to get progress from direct printer value
  */
-export function calculateProgress(
-  printJob: PrintJob | null
-): ProgressCalculation {
-  if (!printJob) {
-    return { progress: 0, source: 'unknown' };
-  }
-
-  // Method 1: Direct progress (preferred when > 0)
-  // Use direct progress if it's a meaningful positive value
+function getDirectProgress(printJob: PrintJob): ProgressCalculation | null {
   if (typeof printJob.progress === 'number' && printJob.progress > 0) {
     return {
       progress: Math.min(100, Math.max(0, printJob.progress)),
       source: 'direct',
     };
   }
+  return null;
+}
 
-  // Method 2: Layer-based calculation (more reliable than time estimation)
+/**
+ * Try to calculate progress from layer information
+ */
+function getLayerProgress(printJob: PrintJob): ProgressCalculation | null {
   if (printJob.layerCurrent > 0 && printJob.layerTotal > 0) {
     const layerProgress = (printJob.layerCurrent / printJob.layerTotal) * 100;
 
@@ -36,8 +32,13 @@ export function calculateProgress(
       };
     }
   }
+  return null;
+}
 
-  // Method 3: Time-based calculation (with estimated total time)
+/**
+ * Try to calculate progress from time information
+ */
+function getTimeProgress(printJob: PrintJob): ProgressCalculation | null {
   if (printJob.timeRemaining > 0 && printJob.estimatedTotalTime > 0) {
     const elapsed = printJob.estimatedTotalTime - printJob.timeRemaining;
     const timeProgress = (elapsed / printJob.estimatedTotalTime) * 100;
@@ -49,8 +50,14 @@ export function calculateProgress(
       };
     }
   }
+  return null;
+}
 
-  // Method 4: Direct progress of 0 (valid when it's the best available data)
+/**
+ * Try to get fallback progress estimates
+ */
+function getFallbackProgress(printJob: PrintJob): ProgressCalculation {
+  // Method 1: Direct progress of 0 (valid when it's the best available data)
   if (typeof printJob.progress === 'number' && printJob.progress === 0) {
     return {
       progress: 0,
@@ -58,7 +65,7 @@ export function calculateProgress(
     };
   }
 
-  // Method 5: Direct progress with clamping for invalid values
+  // Method 2: Direct progress with clamping for invalid values
   if (typeof printJob.progress === 'number') {
     return {
       progress: Math.min(100, Math.max(0, printJob.progress)),
@@ -66,8 +73,7 @@ export function calculateProgress(
     };
   }
 
-  // Method 6: Rough time estimation (when we have time remaining but no total time)
-  // This gives a very rough estimate assuming typical print times
+  // Method 3: Rough time estimation (when we have time remaining but no total time)
   if (printJob.timeRemaining > 0) {
     // For very short remaining times, assume we're near the end
     if (printJob.timeRemaining <= 300) {
@@ -77,16 +83,46 @@ export function calculateProgress(
         source: 'time',
       };
     }
-    // For longer times, we can't reliably estimate progress without total time
-    // But we can at least show that something is happening
+    // For longer times, show minimal progress to indicate active print
     return {
-      progress: 5, // Show minimal progress to indicate active print
+      progress: 5,
       source: 'time',
     };
   }
 
   // Fallback: No progress available
   return { progress: 0, source: 'unknown' };
+}
+
+/**
+ * Calculate print progress with fallback methods
+ * Priority: Direct progress (if > 0) > Layer-based > Time-based > Direct progress (if 0) > Estimation
+ */
+export function calculateProgress(
+  printJob: PrintJob | null
+): ProgressCalculation {
+  if (!printJob) {
+    return { progress: 0, source: 'unknown' };
+  }
+
+  // Try each method in priority order
+  const directProgress = getDirectProgress(printJob);
+  if (directProgress) {
+    return directProgress;
+  }
+
+  const layerProgress = getLayerProgress(printJob);
+  if (layerProgress) {
+    return layerProgress;
+  }
+
+  const timeProgress = getTimeProgress(printJob);
+  if (timeProgress) {
+    return timeProgress;
+  }
+
+  // Use fallback methods
+  return getFallbackProgress(printJob);
 }
 
 /**

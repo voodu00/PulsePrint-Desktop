@@ -72,10 +72,10 @@ describe('TauriMqttService - Basic Integration Tests', () => {
       const mockPrinters = [createMockPrinter()];
       mockInvoke.mockResolvedValue(mockPrinters);
 
-      service = new TauriMqttService();
+      service = TauriMqttService.getInstance();
       await service.initialize();
 
-      const printers = service.getPrinters();
+      const printers = await service.getPrinters();
       expect(printers).toHaveLength(1);
       expect(printers[0].id).toBe('TEST001');
     });
@@ -83,14 +83,14 @@ describe('TauriMqttService - Basic Integration Tests', () => {
     test('should handle initialization errors gracefully', async () => {
       mockInvoke.mockRejectedValue(new Error('Initialization failed'));
 
-      service = new TauriMqttService();
+      service = TauriMqttService.getInstance();
 
       // Should not throw
       await expect(service.initialize()).resolves.not.toThrow();
     });
 
     test('should set up MQTT event listeners', async () => {
-      service = new TauriMqttService();
+      service = TauriMqttService.getInstance();
       await service.initialize();
 
       expect(mockListen).toHaveBeenCalledWith(
@@ -100,7 +100,7 @@ describe('TauriMqttService - Basic Integration Tests', () => {
     });
 
     test('should set up event listeners correctly', async () => {
-      service = new TauriMqttService();
+      service = TauriMqttService.getInstance();
       await service.initialize();
 
       // The service should set up at least the printer-update event listener
@@ -125,14 +125,11 @@ describe('TauriMqttService - Basic Integration Tests', () => {
 
   describe('Printer Management', () => {
     beforeEach(async () => {
-      service = new TauriMqttService();
+      service = TauriMqttService.getInstance();
       await service.initialize();
     });
 
     test('should add printer via service', async () => {
-      service = TauriMqttService.getInstance();
-      await service.initialize();
-
       const printerParams = {
         name: 'Service Test X1C',
         model: 'X1C' as const,
@@ -156,7 +153,6 @@ describe('TauriMqttService - Basic Integration Tests', () => {
     });
 
     test('should remove printer via service', async () => {
-      service = TauriMqttService.getInstance();
       await service.removePrinter('TEST001');
 
       // The actual implementation uses { printerId } object parameter
@@ -166,7 +162,6 @@ describe('TauriMqttService - Basic Integration Tests', () => {
     });
 
     test('should send printer commands', async () => {
-      service = TauriMqttService.getInstance();
       await service.sendPrintCommand('TEST001', 'pause');
 
       expect(mockInvoke).toHaveBeenCalledWith('send_printer_command', {
@@ -197,7 +192,7 @@ describe('TauriMqttService - Basic Integration Tests', () => {
         listeners.push(event);
       });
 
-      // Simulate MQTT update
+      // Mock getPrinters to return updated printer after event
       const updatedPrinter = {
         id: 'REALTIME001',
         name: 'Realtime Test',
@@ -209,6 +204,9 @@ describe('TauriMqttService - Basic Integration Tests', () => {
         temperatures: { nozzle: 220, bed: 60, chamber: 35 },
         last_update: new Date().toISOString(),
       };
+
+      // Mock invoke to return the updated printer when getPrinters is called
+      mockInvoke.mockResolvedValue([updatedPrinter]);
 
       // Trigger the event callback
       eventCallback({ payload: updatedPrinter });
