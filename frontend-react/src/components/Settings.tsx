@@ -42,16 +42,12 @@ const Settings: React.FC<SettingsProps> = ({ onBack, printerService }) => {
   const [showExportDialog, setShowExportDialog] = React.useState(false);
   const [printerCount, setPrinterCount] = useState(0);
 
-  // Handle printer service events to update export button state
   const handlePrinterServiceEvent = useCallback((printers: Printer[]) => {
     setPrinterCount(printers.length);
   }, []);
 
   useEffect(() => {
-    // Add event listener for printer service events
     printerService.addListener(handlePrinterServiceEvent);
-
-    // Initialize printer count
     setPrinterCount(printerService.getAllPrinters().length);
 
     // Cleanup on unmount
@@ -63,8 +59,6 @@ const Settings: React.FC<SettingsProps> = ({ onBack, printerService }) => {
   const handleImportComplete = useCallback(
     (result: ImportResult) => {
       if (result.success && result.imported > 0 && !result.validateOnly) {
-        // Show success message or refresh data
-        // Import completed successfully
         setPrinterCount(printerService.getAllPrinters().length);
       }
     },

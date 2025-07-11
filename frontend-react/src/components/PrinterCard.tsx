@@ -40,7 +40,6 @@ const PrinterCard: React.FC<PrinterCardProps> = ({
   const isPaused = printer.status === 'paused';
   const isError = printer.status === 'error';
 
-  // Track previous status to detect changes
   const previousStatusRef = useRef<string>(printer.status);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -53,15 +52,12 @@ const PrinterCard: React.FC<PrinterCardProps> = ({
     if (previousStatus !== currentStatus && cardRef.current) {
       const card = cardRef.current;
 
-      // Remove any existing flash classes
       card.classList.remove(
         'printer-card-idle-flash',
         'printer-card-error-flash'
       );
 
-      // Add appropriate flash class based on new status and settings
       if (settings.idleNotifications && currentStatus === 'idle') {
-        // Small delay to ensure class removal takes effect
         setTimeout(() => {
           card.classList.add('printer-card-idle-flash');
         }, 10);
@@ -72,7 +68,6 @@ const PrinterCard: React.FC<PrinterCardProps> = ({
       }
     }
 
-    // Update the ref for next comparison
     previousStatusRef.current = currentStatus;
   }, [printer.status, settings.idleNotifications, settings.errorNotifications]);
 

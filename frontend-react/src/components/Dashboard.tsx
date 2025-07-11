@@ -55,7 +55,6 @@ const Dashboard: React.FC<DashboardProps> = ({
         case 'initialized':
         case 'printer_added':
         case 'printer_removed':
-          // For these events, the data contains the updated printer list
           const printerList = Array.isArray(event.data)
             ? event.data
             : [event.data];
@@ -67,8 +66,6 @@ const Dashboard: React.FC<DashboardProps> = ({
           }
           break;
         case 'updated':
-          // For updated event, event.data contains just the single updated printer
-          // We need to update that specific printer in the existing list
           const updatedPrinter = event.data as Printer;
           setPrinters(prevPrinters => {
             const newPrinters = prevPrinters.map(printer =>
@@ -81,7 +78,6 @@ const Dashboard: React.FC<DashboardProps> = ({
         case 'printer_paused':
         case 'printer_resumed':
         case 'printer_stopped':
-          // These events contain the updated printer list
           const updatedPrinters = Array.isArray(event.data)
             ? event.data
             : [event.data];
@@ -200,8 +196,6 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   const handleImportComplete = useCallback(async (result: ImportResult) => {
     if (result.success && result.imported > 0 && !result.validateOnly) {
-      // No need to refresh - the addPrinter events have already updated the local state
-      // Statistics will be automatically updated when printers state changes
       setLastUpdate(new Date());
     }
   }, []);

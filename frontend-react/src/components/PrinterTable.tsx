@@ -28,7 +28,6 @@ interface PrinterTableProps {
   onStop: (printerId: string) => void;
 }
 
-// Individual row component to handle status change animations
 const PrinterTableRow: React.FC<{
   printer: PrinterType;
   settings: any;
@@ -54,7 +53,6 @@ const PrinterTableRow: React.FC<{
   renderTemperatureCell,
   renderActionButtons,
 }) => {
-  // Track previous status to detect changes
   const previousStatusRef = useRef<string>(printer.status);
 
   // Determine if row should flash based on current status and settings
@@ -68,7 +66,6 @@ const PrinterTableRow: React.FC<{
     previousStatusRef.current = printer.status;
   }, [printer.status]);
 
-  // Build the row class names
   const rowClasses = [
     'border-b',
     'border-gray-100',

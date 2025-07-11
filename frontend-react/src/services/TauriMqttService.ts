@@ -88,7 +88,6 @@ export class TauriMqttService {
     );
   }
 
-  // Event listener management
   addListener(listener: (printers: Printer[]) => void): void {
     this.listeners.push(listener);
   }
@@ -97,7 +96,6 @@ export class TauriMqttService {
     this.listeners = this.listeners.filter(l => l !== listener);
   }
 
-  // Event listener management for PrinterServiceEvent
   addEventListener(listener: (event: PrinterServiceEvent) => void): void {
     this.eventListeners.push(listener);
   }
@@ -115,15 +113,13 @@ export class TauriMqttService {
     this.eventListeners.forEach(listener => listener(event));
   }
 
-  // Printer management methods
   async connectPrinter(config: any): Promise<void> {
-    // Ensure the config object matches the backend PrinterConfig struct
     const formattedConfig = {
-      id: config.id || generateUUID(), // Generate ID if not provided
+      id: config.id || generateUUID(),
       name: config.name,
       model: config.model || '',
       ip: config.ip,
-      access_code: config.accessCode || config.access_code, // Handle both camelCase and snake_case
+      access_code: config.accessCode || config.access_code,
       serial: config.serial,
     };
 
@@ -143,18 +139,16 @@ export class TauriMqttService {
     accessCode: string;
     serial: string;
   }): Promise<void> {
-    // Create a config object that matches the backend PrinterConfig struct
     const config = {
-      id: generateUUID(), // Generate a unique ID
+      id: generateUUID(),
       name: printer.name,
-      model: printer.model || '', // Ensure model is not undefined
+      model: printer.model || '',
       ip: printer.ip,
-      access_code: printer.accessCode, // Convert from camelCase to snake_case
+      access_code: printer.accessCode,
       serial: printer.serial,
     };
 
     await invoke('add_printer', { config });
-    // Get updated printer list and notify
     const printers = await this.getPrinters();
     this.notifyEventListeners({ type: 'printer_added', data: printers });
   }
@@ -171,7 +165,6 @@ export class TauriMqttService {
     await invoke('send_printer_command', { printerId, command });
   }
 
-  // Helper method to convert backend printer data to frontend format
   private convertBackendPrinterToFrontend(backendPrinter: any): Printer {
     const converted: any = {
       ...backendPrinter,
@@ -286,7 +279,6 @@ export class TauriMqttService {
     this.notifyEventListeners({ type: 'printer_stopped', data: printers });
   }
 
-  // Initialize the service
   async initialize(): Promise<void> {
     try {
       // Set up real-time event listeners for MQTT updates
@@ -295,10 +287,8 @@ export class TauriMqttService {
         const frontendPrinter =
           this.convertBackendPrinterToFrontend(backendPrinter);
 
-        // Update local state
         this.printers.set(frontendPrinter.id, frontendPrinter);
 
-        // Notify listeners
         this.notifyListeners();
         this.notifyEventListeners({ type: 'updated', data: frontendPrinter });
       });
@@ -307,7 +297,6 @@ export class TauriMqttService {
         const printerId = event.payload as string;
         this.printers.delete(printerId);
 
-        // Notify listeners
         this.notifyListeners();
         this.notifyEventListeners({ type: 'printer_removed', data: [] });
       });
@@ -318,10 +307,7 @@ export class TauriMqttService {
         unlistenPrinterRemoved
       );
 
-      // Get current printers from backend
       const printers = await this.getPrinters();
-
-      // Clear local state and start fresh
       this.printers.clear();
 
       // Add printers to local state
@@ -338,7 +324,6 @@ export class TauriMqttService {
     }
   }
 
-  // Get current printers
   getAllPrinters(): Printer[] {
     return Array.from(this.printers.values());
   }
