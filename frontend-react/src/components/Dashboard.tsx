@@ -34,7 +34,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   onShowSettings,
   printerService,
 }) => {
-  const { settings, updateSetting } = useSettings();
+  const { settings, updateSettings } = useSettings();
   const [printers, setPrinters] = useState<Printer[]>([]);
   const [statistics, setStatistics] = useState<PrinterStatistics>({
     total: 0,
@@ -220,9 +220,9 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   const handleViewModeChange = useCallback(
     (viewMode: 'card' | 'table') => {
-      updateSetting('viewMode', viewMode);
+      updateSettings({ viewMode });
     },
-    [updateSetting]
+    [updateSettings]
   );
 
   useEffect(() => {

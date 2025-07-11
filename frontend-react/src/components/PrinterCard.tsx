@@ -369,6 +369,8 @@ const PrinterCard: React.FC<PrinterCardProps> = ({
             {printer.status.charAt(0).toUpperCase() + printer.status.slice(1)}
           </div>
         </div>
+        {/* Add model display */}
+        <div className="text-sm text-muted-foreground">{printer.model}</div>
       </div>
 
       <div className="card-content space-y-4">

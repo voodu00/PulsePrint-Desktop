@@ -16,9 +16,27 @@
 
   console.log('🔧 Initializing Tauri API mock for e2e tests...');
 
-  // In-memory storage for test printers
+  // Set up Tauri internals IMMEDIATELY before anything else
+  window.__TAURI_INTERNALS__ = {
+    transformCallback: (callback, once = false) => {
+      return callback;
+    },
+    invoke: null, // Will be set later
+  };
+
+  // In-memory storage for test printers and settings
   let testPrinters = new Map();
   let eventListeners = new Map();
+  let testSettings = {
+    darkMode: false,
+    showTemperatures: true,
+    idleNotifications: false,
+    errorNotifications: true,
+    soundNotifications: false,
+    showProgress: true,
+    compactView: false,
+    viewMode: 'card',
+  };
 
   // Mock printer data generator
   function generateMockPrinterData(config) {
@@ -73,10 +91,46 @@
   const mockTauriInvoke = async (command, args) => {
     console.log(`🔧 Mock Tauri invoke: ${command}`, args);
 
+    // Update the internals reference
+    window.__TAURI_INTERNALS__.invoke = mockTauriInvoke;
+
     // Add small delay to simulate real backend
     await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100));
 
     switch (command) {
+      // SQL Plugin Commands - Essential for settings
+      case 'plugin:sql|load':
+        console.log('📊 Mock SQL load');
+        return { success: true };
+
+      case 'plugin:sql|select':
+        console.log('📊 Mock SQL select:', args?.query);
+        // Mock settings queries
+        if (
+          args?.query?.includes('user_preferences') &&
+          args?.values?.[0] === 'app_settings'
+        ) {
+          return [{ value: JSON.stringify(testSettings) }];
+        }
+        return [];
+
+      case 'plugin:sql|execute':
+        console.log('📊 Mock SQL execute:', args?.query);
+        // Handle settings save
+        if (
+          args?.query?.includes('INSERT OR REPLACE INTO user_preferences') &&
+          args?.values?.[0] === 'app_settings'
+        ) {
+          const settingsJson = args.values[1];
+          try {
+            testSettings = JSON.parse(settingsJson);
+            console.log('💾 Saved settings:', testSettings);
+          } catch (error) {
+            console.warn('Failed to parse settings JSON:', error);
+          }
+        }
+        return { success: true };
+
       case 'add_printer':
         if (args?.config) {
           const config = args.config;
@@ -193,6 +247,9 @@
     core: { invoke: mockTauriInvoke },
     event: { listen: mockTauriListen },
   };
+
+  // Update the internals reference now that we have the functions
+  window.__TAURI_INTERNALS__.invoke = mockTauriInvoke;
 
   // Mock for ES6 module imports
   const originalFetch = window.fetch;

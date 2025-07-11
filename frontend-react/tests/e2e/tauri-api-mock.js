@@ -4,6 +4,16 @@
 (function () {
   'use strict';
 
+  console.log('🔧 Initializing Tauri API mock for e2e tests...');
+
+  // Set up Tauri internals IMMEDIATELY before anything else
+  window.__TAURI_INTERNALS__ = {
+    transformCallback: (callback, once = false) => {
+      return callback;
+    },
+    invoke: null, // Will be set later
+  };
+
   // In-memory storage for test printers
   let testPrinters = new Map();
   let eventListeners = new Map();
@@ -92,6 +102,9 @@
   const mockTauriInvoke = async (command, args) => {
     console.log(`🔧 Mock Tauri invoke: ${command}`, args);
 
+    // Update the internals reference
+    window.__TAURI_INTERNALS__.invoke = mockTauriInvoke;
+
     // Add small delay to simulate real backend
     await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100));
 
@@ -167,7 +180,45 @@
 
       case 'get_all_printers':
         const printers = Array.from(testPrinters.values());
-        console.log(`📋 Retrieved ${printers.length} mock printers`);
+        console.log(`📋 Retrieved ${printers.length} mock printers:`, printers);
+
+        // If no printers exist, add some default ones for testing
+        if (printers.length === 0) {
+          console.log('🔄 No printers found, adding default test printers...');
+
+          // Add default test printers
+          const defaultPrinters = [
+            {
+              id: 'test-printer-1',
+              name: 'Test Printer 1',
+              model: 'X1C',
+              ip: '192.168.1.100',
+              access_code: 'test123456',
+              serial: 'TEST001',
+            },
+            {
+              id: 'test-printer-2',
+              name: 'Test Printer 2',
+              model: 'A1 mini',
+              ip: '192.168.1.101',
+              access_code: 'test789012',
+              serial: 'TEST002',
+            },
+          ];
+
+          for (const config of defaultPrinters) {
+            const printerData = generateMockPrinterData(config);
+            testPrinters.set(config.id, printerData);
+            console.log(`✅ Added default test printer: ${config.name}`);
+          }
+
+          const updatedPrinters = Array.from(testPrinters.values());
+          console.log(
+            `📋 Now returning ${updatedPrinters.length} mock printers`
+          );
+          return updatedPrinters;
+        }
+
         return printers;
 
       case 'pause_printer':
@@ -217,29 +268,44 @@
     }
   };
 
-  // Mock event listener
-  const mockTauriListen = async (event, callback) => {
-    console.log(`👂 Mock Tauri listen: ${event}`);
+  // Mock event listener with proper transformCallback support
+  const mockTauriListen = async (event, callback, options = {}) => {
+    console.log(`👂 Mock Tauri listen: ${event}`, options);
 
     if (!eventListeners.has(event)) {
       eventListeners.set(event, []);
     }
-    eventListeners.get(event).push(callback);
+
+    // Handle the transformCallback option that Tauri uses internally
+    let wrappedCallback = callback;
+    if (options && typeof options.transformCallback === 'function') {
+      wrappedCallback = event => {
+        const transformedEvent = options.transformCallback(event);
+        callback(transformedEvent);
+      };
+    }
+
+    eventListeners.get(event).push(wrappedCallback);
 
     // Log current listener count
     console.log(
       `📝 Now have ${eventListeners.get(event).length} listeners for ${event}`
     );
 
-    // Return cleanup function
-    return () => {
+    // Return cleanup function (unlisten function)
+    const unlisten = () => {
       console.log(`👋 Mock Tauri unlisten: ${event}`);
       const listeners = eventListeners.get(event) || [];
-      const index = listeners.indexOf(callback);
+      const index = listeners.indexOf(wrappedCallback);
       if (index > -1) {
         listeners.splice(index, 1);
       }
     };
+
+    // Add the transformCallback property to the unlisten function to match Tauri API
+    unlisten.transformCallback = options?.transformCallback;
+
+    return unlisten;
   };
 
   // Mock the module system by intercepting dynamic imports
@@ -280,6 +346,9 @@
     core: { invoke: mockTauriInvoke },
     event: { listen: mockTauriListen },
   };
+
+  // Update the internals reference now that we have the functions
+  window.__TAURI_INTERNALS__.invoke = mockTauriInvoke;
 
   // Mock for ES6 dynamic imports
   if (window.importShim) {

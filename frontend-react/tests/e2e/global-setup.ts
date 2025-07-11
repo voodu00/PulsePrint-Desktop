@@ -41,6 +41,29 @@ async function globalSetup(config: FullConfig) {
     // Inject the mock script
     await page.addInitScript(mockScript);
 
+    // Disable webpack dev server overlay to prevent it from blocking clicks
+    await page.addInitScript(() => {
+      // Remove webpack dev server overlay if it exists
+      const removeOverlay = () => {
+        const overlay = document.querySelector(
+          '#webpack-dev-server-client-overlay'
+        );
+        if (overlay) {
+          overlay.remove();
+        }
+      };
+
+      // Remove overlay on DOM ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', removeOverlay);
+      } else {
+        removeOverlay();
+      }
+
+      // Also remove overlay periodically in case it gets added later
+      setInterval(removeOverlay, 500);
+    });
+
     // Verify the mock is working
     const mockExists = await page.evaluate(() => {
       return typeof window.__TAURI_MOCK__ !== 'undefined';
