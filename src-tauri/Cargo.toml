@@ -29,7 +29,7 @@ tokio = { version = "1.0", features = ["full"] }
 uuid = { version = "1.0", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
 anyhow = "1.0"
-rustls = "0.22"
+rustls = "0.23"
 tauri-plugin-sql = { version = "2.3.0", features = ["sqlite"] }
 
 [dev-dependencies]
