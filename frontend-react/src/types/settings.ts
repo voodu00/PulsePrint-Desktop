@@ -6,14 +6,16 @@ export interface SettingsState {
   showTemperatures: boolean;
   showProgress: boolean;
   compactView: boolean;
+  viewMode: 'card' | 'table';
 }
 
 export const defaultSettings: SettingsState = {
-  idleNotifications: false,
+  idleNotifications: true,
   errorNotifications: true,
   darkMode: false,
   soundNotifications: false,
   showTemperatures: true,
   showProgress: true,
   compactView: false,
+  viewMode: 'card',
 };

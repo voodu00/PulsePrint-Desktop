@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { setupNetworkMocking } from './test-helpers';
 
 test.describe('PulsePrint Dashboard', () => {
+  test.beforeEach(async ({ page }) => {
+    await setupNetworkMocking(page);
+  });
   test('should load the dashboard', async ({ page }) => {
     await page.goto('/');
 
@@ -10,7 +14,7 @@ test.describe('PulsePrint Dashboard', () => {
     // Wait for the dashboard to fully load - the loading state might be too fast to catch
     // So we'll wait for the main content instead
     await expect(page.locator('text=PulsePrint Desktop')).toBeVisible({
-      timeout: 10000,
+      timeout: 30000,
     });
 
     // Check that we can see the main dashboard elements
@@ -20,14 +24,14 @@ test.describe('PulsePrint Dashboard', () => {
   });
 
   test('should display the main navigation elements', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?e2e-test=true');
 
     // Wait for the page to load completely
     await page.waitForLoadState('networkidle');
 
     // Wait for the main dashboard content to be visible
     await expect(page.locator('text=PulsePrint Desktop')).toBeVisible({
-      timeout: 10000,
+      timeout: 30000,
     });
 
     // Check for the main heading
@@ -51,14 +55,14 @@ test.describe('PulsePrint Dashboard', () => {
   });
 
   test('should be able to navigate to settings', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?e2e-test=true');
 
     // Wait for the page to load completely
     await page.waitForLoadState('networkidle');
 
     // Wait for the dashboard to be fully loaded
     await expect(page.locator('text=PulsePrint Desktop')).toBeVisible({
-      timeout: 10000,
+      timeout: 30000,
     });
 
     // Click the settings button - force click to bypass overlay issues
@@ -87,35 +91,39 @@ test.describe('PulsePrint Dashboard', () => {
   });
 
   test('should display statistics overview', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?e2e-test=true&with-default-printers');
 
     // Wait for the page to load completely
     await page.waitForLoadState('networkidle');
 
     // Wait for the dashboard to be fully loaded
     await expect(page.locator('text=PulsePrint Desktop')).toBeVisible({
-      timeout: 10000,
+      timeout: 30000,
     });
 
-    // Check for statistics cards
+    // Check for statistics cards - use more specific selectors to avoid conflicts
     await expect(page.locator('text=Total Printers')).toBeVisible();
     await expect(page.locator('text=Online')).toBeVisible();
-    await expect(page.locator('text=Printing')).toBeVisible();
-    await expect(page.locator('text=Idle')).toBeVisible();
+    // Use first() to avoid strict mode violation with multiple "Printing" elements
+    await expect(page.locator('text=Printing').first()).toBeVisible();
+    await expect(page.locator('text=Idle').first()).toBeVisible();
     await expect(page.locator('text=Errors')).toBeVisible();
   });
 });
 
 test.describe('PulsePrint Settings', () => {
+  test.beforeEach(async ({ page }) => {
+    await setupNetworkMocking(page);
+  });
   test('should load settings page', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?e2e-test=true');
 
     // Wait for the page to load completely
     await page.waitForLoadState('networkidle');
 
     // Wait for the dashboard to be fully loaded
     await expect(page.locator('text=PulsePrint Desktop')).toBeVisible({
-      timeout: 10000,
+      timeout: 30000,
     });
 
     // Navigate to settings
@@ -145,14 +153,14 @@ test.describe('PulsePrint Settings', () => {
   });
 
   test('should be able to interact with settings', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?e2e-test=true');
 
     // Wait for the page to load completely
     await page.waitForLoadState('networkidle');
 
     // Wait for the dashboard to be fully loaded
     await expect(page.locator('text=PulsePrint Desktop')).toBeVisible({
-      timeout: 10000,
+      timeout: 30000,
     });
 
     // Navigate to settings

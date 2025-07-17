@@ -22,7 +22,7 @@ import { TauriMqttService } from '../services/TauriMqttService';
 import { ImportPrintersDialog } from './ImportPrintersDialog';
 import { ExportPrintersDialog } from './ExportPrintersDialog';
 import { ImportResult } from '../types/import';
-import { PrinterServiceEvent } from '../types/printer';
+import { Printer } from '../types/printer';
 
 interface SettingsProps {
   onBack: () => void;
@@ -42,40 +42,24 @@ const Settings: React.FC<SettingsProps> = ({ onBack, printerService }) => {
   const [showExportDialog, setShowExportDialog] = React.useState(false);
   const [printerCount, setPrinterCount] = useState(0);
 
-  // Handle printer service events to update export button state
-  const handlePrinterServiceEvent = useCallback(
-    (event: PrinterServiceEvent) => {
-      switch (event.type) {
-        case 'initialized':
-        case 'updated':
-        case 'printer_added':
-        case 'printer_removed':
-          setPrinterCount(printerService.getPrinters().length);
-          break;
-      }
-    },
-    [printerService]
-  );
+  const handlePrinterServiceEvent = useCallback((printers: Printer[]) => {
+    setPrinterCount(printers.length);
+  }, []);
 
   useEffect(() => {
-    // Add event listener for printer service events
-    printerService.addEventListener(handlePrinterServiceEvent);
-
-    // Initialize printer count
-    setPrinterCount(printerService.getPrinters().length);
+    printerService.addListener(handlePrinterServiceEvent);
+    setPrinterCount(printerService.getAllPrinters().length);
 
     // Cleanup on unmount
     return () => {
-      printerService.removeEventListener(handlePrinterServiceEvent);
+      printerService.removeListener(handlePrinterServiceEvent);
     };
   }, [printerService, handlePrinterServiceEvent]);
 
   const handleImportComplete = useCallback(
     (result: ImportResult) => {
       if (result.success && result.imported > 0 && !result.validateOnly) {
-        // Show success message or refresh data
-        // Import completed successfully
-        setPrinterCount(printerService.getPrinters().length);
+        setPrinterCount(printerService.getAllPrinters().length);
       }
     },
     [printerService]

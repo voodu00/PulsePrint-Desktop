@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -28,6 +28,7 @@ import {
   getFormatDescription,
 } from '../utils/formatUtils';
 import { Logger } from '../utils/logger';
+import { Printer } from '../types/printer';
 
 interface ExportPrintersDialogProps {
   isOpen: boolean;
@@ -49,12 +50,27 @@ export const ExportPrintersDialog: React.FC<ExportPrintersDialogProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [printers, setPrinters] = useState<Printer[]>([]);
 
   const importService = useMemo(
     () => new ImportService(printerService),
     [printerService]
   );
-  const printers = printerService.getPrinters();
+
+  useEffect(() => {
+    const loadPrinters = async () => {
+      try {
+        const printerList = await printerService.getPrinters();
+        setPrinters(printerList);
+      } catch (err) {
+        Logger.error('Failed to load printers:', err);
+      }
+    };
+
+    if (isOpen) {
+      loadPrinters();
+    }
+  }, [isOpen, printerService]);
 
   const handleExport = useCallback(async () => {
     setIsLoading(true);

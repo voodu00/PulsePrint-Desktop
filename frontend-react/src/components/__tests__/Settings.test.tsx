@@ -23,18 +23,6 @@ jest.mock('../../utils/logger', () => ({
   },
 }));
 
-// Mock localStorage
-const mockLocalStorage = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  clear: jest.fn(),
-};
-
-Object.defineProperty(window, 'localStorage', {
-  value: mockLocalStorage,
-});
-
 // Mock document.documentElement.classList
 const mockClassList = {
   add: jest.fn(),
@@ -45,11 +33,50 @@ Object.defineProperty(document.documentElement, 'classList', {
   value: mockClassList,
 });
 
+// Helper to mock settings
+const mockSettings = (settings: any) => {
+  const mockInstance = {
+    getSettings: jest.fn().mockResolvedValue({
+      darkMode: false,
+      showTemperatures: true,
+      idleNotifications: false,
+      errorNotifications: true,
+      showProgress: true,
+      viewMode: 'card',
+      ...settings,
+    }),
+    saveSettings: jest.fn().mockResolvedValue(undefined),
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+    initialize: jest.fn().mockResolvedValue(undefined),
+    destroy: jest.fn(),
+    getPrinters: jest.fn().mockResolvedValue([]),
+    getAllPrinters: jest.fn().mockReturnValue([]),
+    getPrinter: jest.fn().mockReturnValue(undefined),
+    connectPrinter: jest.fn().mockResolvedValue(undefined),
+    disconnectPrinter: jest.fn().mockResolvedValue(undefined),
+    sendPrintCommand: jest.fn().mockResolvedValue(undefined),
+    pausePrint: jest.fn().mockResolvedValue(undefined),
+    resumePrint: jest.fn().mockResolvedValue(undefined),
+    stopPrint: jest.fn().mockResolvedValue(undefined),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+  };
+
+  // Use jest.mocked to properly type the mock
+  const MockedTauriMqttService = jest.mocked(TauriMqttService);
+  MockedTauriMqttService.getInstance = jest
+    .fn()
+    .mockReturnValue(mockInstance as any);
+
+  return mockInstance;
+};
+
 const renderSettings = (
   onBack = jest.fn(),
   printerService?: TauriMqttService
 ) => {
-  const mockPrinterService = printerService || new TauriMqttService();
+  const mockPrinterService = printerService || TauriMqttService.getInstance();
   return render(
     <SettingsProvider>
       <Settings onBack={onBack} printerService={mockPrinterService} />
@@ -60,7 +87,16 @@ const renderSettings = (
 describe('Settings Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockLocalStorage.getItem.mockReturnValue(null);
+
+    // Set up default settings mock
+    mockSettings({
+      darkMode: false,
+      showTemperatures: true,
+      idleNotifications: false,
+      errorNotifications: true,
+      showProgress: true,
+      viewMode: 'card',
+    });
   });
 
   describe('Settings Interactions', () => {
@@ -91,6 +127,15 @@ describe('Settings Component', () => {
     });
 
     test('should save settings when save button is clicked', async () => {
+      const mockInstance = mockSettings({
+        darkMode: false,
+        showTemperatures: true,
+        idleNotifications: false,
+        errorNotifications: true,
+        showProgress: true,
+        viewMode: 'card',
+      });
+
       renderSettings();
 
       // Make a change by toggling dark mode
@@ -103,11 +148,12 @@ describe('Settings Component', () => {
       const saveButton = saveButtons[0]; // Use the first one (header button)
       fireEvent.click(saveButton);
 
-      // Should save to localStorage
+      // Should save to database
       await waitFor(() => {
-        expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
-          'pulseprint-desktop-settings',
-          expect.stringContaining('"darkMode":true')
+        expect(mockInstance.saveSettings).toHaveBeenCalledWith(
+          expect.objectContaining({
+            darkMode: true,
+          })
         );
       });
 

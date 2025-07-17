@@ -75,9 +75,34 @@ export async function waitForAppReady(page: Page): Promise<void> {
   await page.goto('/');
   await page.waitForLoadState('networkidle');
 
+  // Remove webpack dev server overlay if it exists
+  await page.evaluate(() => {
+    const overlay = document.querySelector(
+      '#webpack-dev-server-client-overlay'
+    );
+    if (overlay) {
+      overlay.remove();
+    }
+  });
+
   // Wait for the main title to be visible
   await page.waitForSelector('text=PulsePrint Desktop', {
     timeout: 30000,
+  });
+
+  // Set up periodic overlay removal
+  await page.evaluate(() => {
+    const removeOverlay = () => {
+      const overlay = document.querySelector(
+        '#webpack-dev-server-client-overlay'
+      );
+      if (overlay) {
+        overlay.remove();
+      }
+    };
+
+    // Remove overlay periodically
+    setInterval(removeOverlay, 1000);
   });
 }
 

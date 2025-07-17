@@ -8,7 +8,9 @@ import {
   Download,
 } from 'lucide-react';
 import PrinterCard from './PrinterCard';
+import PrinterTable from './PrinterTable';
 import StatisticsOverview from './StatisticsOverview';
+import ViewToggle from './ViewToggle';
 
 import { TauriMqttService } from '../services/TauriMqttService';
 import { AddPrinterDialog } from './AddPrinterDialog';
@@ -21,6 +23,7 @@ import {
 } from '../types/printer';
 import { ImportResult } from '../types/import';
 import { Logger } from '../utils/logger';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface DashboardProps {
   onShowSettings: () => void;
@@ -31,6 +34,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   onShowSettings,
   printerService,
 }) => {
+  const { settings, updateSettings } = useSettings();
   const [printers, setPrinters] = useState<Printer[]>([]);
   const [statistics, setStatistics] = useState<PrinterStatistics>({
     total: 0,
@@ -49,29 +53,72 @@ const Dashboard: React.FC<DashboardProps> = ({
     (event: PrinterServiceEvent) => {
       switch (event.type) {
         case 'initialized':
-        case 'updated':
         case 'printer_added':
         case 'printer_removed':
-          // For all these events, get the full printer list from the service
-          // to ensure we have the most up-to-date state
-          const fullPrinterList = printerService.getPrinters();
-          setPrinters(fullPrinterList);
-          setStatistics(printerService.getStatistics());
+          const printerList = Array.isArray(event.data)
+            ? event.data
+            : [event.data];
+          setPrinters(printerList);
           setLastUpdate(new Date());
 
           if (event.type === 'initialized') {
             setIsLoading(false);
           }
           break;
+        case 'updated':
+          const updatedPrinter = event.data as Printer;
+          setPrinters(prevPrinters => {
+            const newPrinters = prevPrinters.map(printer =>
+              printer.id === updatedPrinter.id ? updatedPrinter : printer
+            );
+            return newPrinters;
+          });
+          setLastUpdate(new Date());
+          break;
         case 'printer_paused':
         case 'printer_resumed':
         case 'printer_stopped':
-          // These will be handled by the updated event that follows
+          const updatedPrinters = Array.isArray(event.data)
+            ? event.data
+            : [event.data];
+          setPrinters(updatedPrinters);
+          setLastUpdate(new Date());
           break;
       }
     },
-    [printerService]
+    []
   );
+
+  // Calculate statistics whenever printers change
+  useEffect(() => {
+    const stats = {
+      total: printers.length,
+      online: 0,
+      printing: 0,
+      idle: 0,
+      error: 0,
+    };
+
+    printers.forEach(printer => {
+      switch (printer.status) {
+        case 'printing':
+          stats.printing++;
+          break;
+        case 'idle':
+          stats.idle++;
+          break;
+        case 'error':
+          stats.error++;
+          break;
+        case 'connecting':
+          // Count connecting printers as online
+          stats.online++;
+          break;
+      }
+    });
+
+    setStatistics(stats);
+  }, [printers]);
 
   const handlePause = useCallback(
     async (printerId: string) => {
@@ -147,17 +194,11 @@ const Dashboard: React.FC<DashboardProps> = ({
     setShowImportPrinters(false);
   }, []);
 
-  const handleImportComplete = useCallback(
-    async (result: ImportResult) => {
-      if (result.success && result.imported > 0 && !result.validateOnly) {
-        // No need to refresh - the addPrinter events have already updated the local state
-        // Just update statistics to reflect the new printer count
-        setStatistics(printerService.getStatistics());
-        setLastUpdate(new Date());
-      }
-    },
-    [printerService]
-  );
+  const handleImportComplete = useCallback(async (result: ImportResult) => {
+    if (result.success && result.imported > 0 && !result.validateOnly) {
+      setLastUpdate(new Date());
+    }
+  }, []);
 
   const handleExportPrinters = useCallback(() => {
     setShowExportPrinters(true);
@@ -170,6 +211,13 @@ const Dashboard: React.FC<DashboardProps> = ({
   const handleSettings = useCallback(() => {
     onShowSettings();
   }, [onShowSettings]);
+
+  const handleViewModeChange = useCallback(
+    (viewMode: 'card' | 'table') => {
+      updateSettings({ viewMode });
+    },
+    [updateSettings]
+  );
 
   useEffect(() => {
     const initializeDashboard = async () => {
@@ -270,63 +318,81 @@ const Dashboard: React.FC<DashboardProps> = ({
         {/* Statistics Overview */}
         <StatisticsOverview statistics={statistics} />
 
-        {/* Last Update Info */}
+        {/* Last Update Info and View Toggle */}
         <div className="flex items-center justify-between text-sm text-muted-foreground mb-6">
           <span>
             Last updated:{' '}
             {lastUpdate ? lastUpdate.toLocaleTimeString() : 'Loading...'}
           </span>
-          <div className="flex items-center gap-2">
-            <span className="text-xs">Real-time Updates</span>
-            <div className="badge badge-outline">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-1" />
-              Live
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-xs">Real-time Updates</span>
+              <div className="badge badge-outline">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-1" />
+                Live
+              </div>
             </div>
+            {printers.length > 0 && (
+              <ViewToggle
+                viewMode={settings.viewMode}
+                onViewModeChange={handleViewModeChange}
+              />
+            )}
           </div>
         </div>
 
-        {/* Printer Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {printers.length === 0 ? (
-            <div className="col-span-full">
-              <div className="card p-8 text-center">
-                <PrinterIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">
-                  No Printers Added
-                </h3>
-                <p className="text-muted-foreground mb-4">
-                  Add your first printer to start monitoring your 3D prints.
-                </p>
-                <div className="flex gap-2 justify-center">
-                  <button
-                    onClick={handleAddPrinter}
-                    className="btn btn-default"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Your First Printer
-                  </button>
-                  <button
-                    onClick={handleImportPrinters}
-                    className="btn btn-outline"
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Import Printers
-                  </button>
+        {/* Printer Display */}
+        {printers.length === 0 ? (
+          <div className="card p-8 text-center">
+            <PrinterIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Printers Added</h3>
+            <p className="text-muted-foreground mb-4">
+              Add your first printer to start monitoring your 3D prints.
+            </p>
+            <div className="flex gap-2 justify-center">
+              <button onClick={handleAddPrinter} className="btn btn-default">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Your First Printer
+              </button>
+              <button
+                onClick={handleImportPrinters}
+                className="btn btn-outline"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Import Printers
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="view-container">
+            {settings.viewMode === 'table' ? (
+              <div className="view-content view-table">
+                <div className="card p-0 overflow-hidden">
+                  <PrinterTable
+                    printers={printers}
+                    onPause={handlePause}
+                    onResume={handleResume}
+                    onStop={handleStop}
+                  />
                 </div>
               </div>
-            </div>
-          ) : (
-            printers.map(printer => (
-              <PrinterCard
-                key={printer.id}
-                printer={printer}
-                onPause={handlePause}
-                onResume={handleResume}
-                onStop={handleStop}
-              />
-            ))
-          )}
-        </div>
+            ) : (
+              <div className="view-content view-card">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {printers.map(printer => (
+                    <PrinterCard
+                      key={printer.id}
+                      printer={printer}
+                      onPause={handlePause}
+                      onResume={handleResume}
+                      onStop={handleStop}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

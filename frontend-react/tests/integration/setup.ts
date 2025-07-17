@@ -30,21 +30,6 @@ global.window = Object.create(window);
   },
 };
 
-// Mock localStorage
-const localStorageMock = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  clear: jest.fn(),
-  length: 0,
-  key: jest.fn(),
-};
-
-Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock,
-  writable: true,
-});
-
 // Mock IntersectionObserver with proper typing
 (global as any).IntersectionObserver = class IntersectionObserver {
   root: Element | null = null;
@@ -104,6 +89,17 @@ jest.mock('@tauri-apps/api/event', () => eventMock);
 // Ensure dynamic imports also get the mock
 jest.doMock('@tauri-apps/api/event', () => eventMock);
 
+// Mock @tauri-apps/plugin-sql for database operations
+jest.mock('@tauri-apps/plugin-sql', () => ({
+  Database: {
+    load: jest.fn().mockResolvedValue({
+      select: jest.fn(),
+      execute: jest.fn(),
+      close: jest.fn(),
+    }),
+  },
+}));
+
 // Mock @tauri-apps/api/dialog (only mock if it exists)
 jest.mock(
   '@tauri-apps/api/dialog',
@@ -158,12 +154,6 @@ afterAll(() => {
 beforeEach(() => {
   jest.clearAllMocks();
 
-  // Reset localStorage mock
-  localStorageMock.getItem.mockClear();
-  localStorageMock.setItem.mockClear();
-  localStorageMock.removeItem.mockClear();
-  localStorageMock.clear.mockClear();
-
   // Reset Tauri mocks
   mockInvoke.mockClear();
   mockListen.mockClear();
@@ -174,20 +164,24 @@ beforeEach(() => {
   mockListen.mockResolvedValue(() => {});
   mockEmit.mockResolvedValue(undefined);
 
-  // Default localStorage behavior
-  localStorageMock.getItem.mockImplementation((key: string) => {
-    if (key === 'pulseprint-desktop-settings') {
-      return JSON.stringify({
-        idleNotifications: false,
-        errorNotifications: true,
-        darkMode: false,
-        soundNotifications: false,
-        showTemperatures: true,
-        showProgress: true,
-        compactView: false,
-      });
+  // Default database mock behavior - return default settings
+  mockInvoke.mockImplementation((command: string, args?: any) => {
+    if (command === 'get_user_preference' && args?.key === 'app_settings') {
+      return Promise.resolve(
+        JSON.stringify({
+          idleNotifications: false,
+          errorNotifications: true,
+          darkMode: false,
+          showTemperatures: true,
+          showProgress: true,
+          viewMode: 'card',
+        })
+      );
     }
-    return null;
+    if (command === 'set_user_preference') {
+      return Promise.resolve();
+    }
+    return Promise.resolve([]);
   });
 });
 
@@ -198,4 +192,4 @@ afterEach(() => {
 });
 
 // Export mocks for use in tests
-export { mockInvoke, mockListen, mockEmit, localStorageMock };
+export { mockInvoke, mockListen, mockEmit };
