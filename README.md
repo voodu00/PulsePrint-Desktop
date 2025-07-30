@@ -6,7 +6,7 @@
 
 A cross-platform desktop application for monitoring and controlling Bambu Lab 3D printers. Built with Tauri, Rust, and React for performance, security, and native desktop integration.
 
-> 🚀 **Alpha Release**: PulsePrint Desktop is in active development. Core features are stable and ready for community testing. See [CHANGELOG.md](CHANGELOG.md) for verified features and [features.md](features.md) for the complete roadmap.
+> 🚀 **Alpha Release**: PulsePrint Desktop is in active development. Core features are stable and ready for community testing. See [CHANGELOG.md](CHANGELOG.md) for verified features, [FEATURES.md](FEATURES.md) for current implementation status, and [ROADMAP.md](ROADMAP.md) for future development plans.
 
 ## ✨ Key Features
 
