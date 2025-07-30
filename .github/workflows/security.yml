@@ -51,11 +51,6 @@ jobs:
           cd frontend-react
           yarn audit --audit-level moderate || true
 
-      - name: Check for known vulnerabilities
-        run: |
-          cd frontend-react
-          yarn audit-ci --config ../audit-ci.json || true
-
   audit-rust:
     name: Rust Security Audit
     runs-on: ubuntu-latest
@@ -117,4 +112,4 @@ jobs:
   #       uses: actions/dependency-review-action@v4
   #       with:
   #         fail-on-severity: moderate
-  #         allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC
+  #         allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC 
