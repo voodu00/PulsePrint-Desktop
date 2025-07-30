@@ -1,17 +1,38 @@
 # PulsePrint Desktop
 
-A cross-platform desktop application for monitoring and controlling Bambu Lab 3D printers, built with Tauri, Rust, and React.
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Alpha Release](https://img.shields.io/badge/status-alpha-orange.svg)](CHANGELOG.md)
+[![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri-24C8DB.svg)](https://tauri.app/)
 
-## Features
+A cross-platform desktop application for monitoring and controlling Bambu Lab 3D printers. Built with Tauri, Rust, and React for performance, security, and native desktop integration.
 
-- **Real-time Monitoring**: Live temperature, progress, and status updates via MQTT
-- **Printer Control**: Pause, resume, and stop print jobs remotely
-- **Multi-printer Support**: Connect and monitor multiple printers simultaneously
-- **Statistics Overview**: View printing statistics and printer health
-- **Settings Management**: Configure notifications, display options, and system preferences
-- **Dual View Support**: Switch between card view and table view for printer display
-- **Dual Service Support**: Toggle between mock data and real MQTT for testing
-- **Persistent Configuration**: All settings and printer configurations stored in SQLite database
+> 🚀 **Alpha Release**: PulsePrint Desktop is in active development. Core features are stable and ready for community testing. See [CHANGELOG.md](CHANGELOG.md) for verified features and [features.md](features.md) for the complete roadmap.
+
+## ✨ Key Features
+
+### 🖥️ Multi-Printer Dashboard  
+- **Real-time MQTT Monitoring** - Live temperature, progress, and status updates via secure MQTT over TLS
+- **Dual View Support** - Switch between card view and table view with persistent preferences
+- **Multi-printer Support** - Connect and monitor 1-5+ printers simultaneously
+- **Smart Status Detection** - Intelligent status recognition (idle, printing, paused, error, offline)
+
+### 🎛️ Printer Control & Management
+- **Remote Control** - Pause, resume, and stop print jobs remotely
+- **Printer Configuration** - Add printers manually or import from JSON, CSV, YAML, TXT files
+- **Temperature Monitoring** - Real-time hotend, bed, and chamber temperature displays
+- **Progress Tracking** - Detailed layer information, completion percentage, and time remaining
+
+### 🎨 User Experience
+- **Dark/Light Mode** - Theme switching with system preference support
+- **Responsive Design** - Optimized layouts for various screen sizes and printer counts
+- **Real-time Updates** - Live visual indicators with color-coded status and flash animations
+- **Mock Service Mode** - Development and testing mode with simulated printer data
+
+### 💾 Data & Configuration
+- **SQLite Database** - Persistent storage for all settings and printer configurations
+- **Cross-platform Storage** - Platform-specific app data directories with automatic migrations
+- **Settings Persistence** - User preferences maintained across application sessions
+- **Import/Export Support** - Backup and share printer configurations in multiple formats
 
 ## Prerequisites
 
@@ -208,9 +229,13 @@ The application uses a **SQLite database** for all persistent storage:
 4. Test thoroughly (including database migrations)
 5. Submit a pull request
 
-## License
+## 📄 License
 
-[Add your license information here]
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🌐 Open Source
+
+PulsePrint Desktop is fully open source with no feature restrictions. We believe in transparent development and community-driven innovation for the 3D printing ecosystem.
 
 ## Acknowledgments
 
