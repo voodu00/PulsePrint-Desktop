@@ -33,6 +33,15 @@ To enable all workflows, the following secrets need to be configured in GitHub r
 - **Dependencies**: 
   - `frontend-react/audit-ci.json` (✅ exists)
 
+### 4. **release.yml**
+- **Triggers**: Push of version tags (v*)
+- **Purpose**: Automated cross-platform builds and GitHub release creation
+- **Dependencies**: None (uses built-in GITHUB_TOKEN)
+- **Outputs**: 
+  - Windows `.msi` installer
+  - macOS `.dmg` files (Intel & Apple Silicon)
+  - Linux `.AppImage`
+
 ## Workflow Features
 
 ### Caching Strategy
@@ -56,3 +65,34 @@ All workflows implement intelligent caching for:
 - ✅ Required configuration files exist
 - ⚠️  Requires `SONAR_TOKEN` secret setup
 - ✅ All dependencies properly specified
+
+## Release Process
+
+### Creating a New Release
+
+1. **Update version numbers**:
+   - `frontend-react/package.json`
+   - `src-tauri/Cargo.toml`
+   - `src-tauri/tauri.conf.json`
+
+2. **Create and push a version tag**:
+   ```bash
+   git tag v0.1.0
+   git push origin v0.1.0
+   ```
+
+3. **Automated build process**:
+   - GitHub Actions will automatically trigger the release workflow
+   - Builds will run in parallel for all platforms
+   - A draft release will be created with all artifacts
+
+4. **Finalize the release**:
+   - Go to GitHub Releases page
+   - Edit the draft release
+   - Update the changelog
+   - Publish the release
+
+### Version Tag Format
+- Use semantic versioning: `v{major}.{minor}.{patch}`
+- Pre-releases: `v{major}.{minor}.{patch}-{alpha|beta}.{number}`
+- Examples: `v1.0.0`, `v0.2.0-beta.1`, `v0.1.0-alpha`
