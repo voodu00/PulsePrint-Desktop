@@ -20,19 +20,25 @@
 ### 🎨 Display & UI
 
 - **Dark/Light Mode**: Theme switching with system preference support
-- **Layout Options**: Grid view and list view for printer cards
-- **Drag & Drop**: Reorder printer cards with drag-and-drop functionality
-- **Compact View**: Space-efficient layout option
+- **Layout Options**: Grid view and table view toggle for printer cards (compact view)
 - **Temperature Display**: Hotend and bed temperature monitoring
 - **Progress Details**: Layer information and time remaining
 - **Responsive Design**: Optimized for various screen sizes
 
+**Planned for Alpha:**
+- **Drag & Drop**: Reorder printer cards with drag-and-drop functionality
+
 ### 🔔 Notifications & Alerts
 
-- **Idle Printer Alerts**: Visual flashing for inactive printers
-- **Error Printer Alerts**: Red glow animations for error states
-- **Sound Notifications**: Audio alerts for print completion and errors
-- **Visual Feedback**: Real-time status indicators
+- **Idle Printer Alerts**: Blue flashing for inactive printers
+- **Error Printer Alerts**: Red flashing for error states
+- **Visual Status Indicators**: Real-time printer status display on cards
+
+**Planned for Alpha:**
+- **System Notifications**: Desktop alerts for print completion and errors
+- **Sound Notifications**: Audio alerts for important events
+
+**Post-Alpha:**
 - **Notification History**: Persistent log of all alerts and events
 - **Inventory Alerts**: Low filament/material notifications based on usage tracking
 - **Maintenance Alerts**: Scheduled maintenance reminders based on print count and hours
