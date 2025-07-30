@@ -120,11 +120,17 @@ jobs:
           cargo test --verbose --lib --bins
           # Skip integration tests that require frontend build
 
+      - name: Create frontend build directory
+        run: |
+          # Tauri expects frontend build to exist
+          mkdir -p frontend-react/build
+          echo '<!DOCTYPE html><html><body>Placeholder</body></html>' > frontend-react/build/index.html
+
       - name: Check build
         run: |
           cd src-tauri
-          # Just check the build compiles without full system deps
-          cargo check --release
+          # Just check the build compiles
+          cargo check
 
   integration:
     name: Integration & E2E Tests
