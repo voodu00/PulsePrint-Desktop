@@ -34,200 +34,109 @@ A cross-platform desktop application for monitoring and controlling Bambu Lab 3D
 - **Settings Persistence** - User preferences maintained across application sessions
 - **Import/Export Support** - Backup and share printer configurations in multiple formats
 
-## Prerequisites
+## 🚀 Installation
 
-- **Rust**: Install from [rustup.rs](https://rustup.rs/)
-- **Node.js**: Version 16 or higher
-- **npm** or **yarn**: For managing frontend dependencies
+### Download for Your Platform
 
-## Installation
+**Alpha releases are available on GitHub:**
 
-1. **Clone the repository**:
+[![Download Latest](https://img.shields.io/github/v/release/voodu00/pulseprint-desktop-app?include_prereleases&label=Download%20Alpha&style=for-the-badge)](https://github.com/voodu00/pulseprint-desktop-app/releases)
 
-   ```bash
-   git clone <repository-url>
-   cd pulseprint-desktop
-   ```
+- **Windows**: Download the `.msi` installer
+- **macOS**: Download the `.dmg` file  
+- **Linux**: Download the `.AppImage` file
 
-2. **Install frontend dependencies**:
+### Quick Setup
 
-   ```bash
-   cd frontend-react
-   npm install
-   cd ..
-   ```
+1. **Download** the installer for your platform
+2. **Install** the application (double-click installer)
+3. **Launch** PulsePrint Desktop
+4. **Add your printer** in Settings with:
+   - Printer name and IP address
+   - Access code from printer's LAN settings
+   - Serial number
 
-3. **Install Tauri CLI** (if not already installed):
-   ```bash
-   cargo install tauri-cli
-   ```
+## 🖨️ Printer Setup
 
-## Development
+### Bambu Lab Printer Configuration
 
-> 📋 **Quick Start**: See [`DEVELOPMENT_GUIDE.md`](./DEVELOPMENT_GUIDE.md) for comprehensive development workflows, pre-commit checks, and release procedures.
+1. **Enable LAN Mode** on your printer:
+   - Go to printer settings → Network → LAN Mode
+   - Enable LAN access and note the access code
 
-### Before You Commit
+2. **Find Printer IP**:
+   - Check your router's connected devices
+   - Or use network scanning tools
+
+3. **Add to PulsePrint**:
+   - Open Settings → Add Printer
+   - Enter name, IP address, access code, and serial number
+
+### Supported Printers
+- Bambu Lab A1 / A1 mini
+- Bambu Lab P1P / P1S  
+- Bambu Lab X1 / X1C
+- *More models coming soon*
+
+## 🛠️ Development
+
+**Want to contribute?** See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions.
+
+### Quick Development Setup
 
 ```bash
-cd src-tauri
-make pre-commit    # Fast checks (~30s)
-```
+# Prerequisites: Rust, Node.js 16+, yarn
+git clone https://github.com/voodu00/pulseprint-desktop-app.git
+cd pulseprint-desktop-app
 
-### Before You Push
+# Install dependencies
+cd frontend-react && yarn install && cd ..
 
-```bash
-cd src-tauri
-make pre-push-full    # Full validation (~3min)
-```
-
-### Running the Development Server
-
-```bash
-# From the project root
+# Run development server
 cargo tauri dev
 ```
 
-This will start both the Rust backend and React frontend in development mode with hot reload.
-
-### Building for Production
-
-```bash
-# Build the application
-cargo tauri build
-```
-
-Built applications will be available in `src-tauri/target/release/bundle/`.
-
-### Testing
-
-```bash
-# Quick tests
-cd src-tauri && make test
-
-# Full E2E validation (before releases)
-cd src-tauri && make pre-release-full
-```
-
-For detailed testing information, see the [E2E Test Coverage Summary](./frontend-react/tests/e2e/COVERAGE_SUMMARY.md).
-
-## Configuration
-
-### Adding Printers
-
-1. Open the application
-2. Navigate to Settings
-3. Add printer with:
-   - **Name**: Display name for the printer
-   - **IP Address**: Local IP address of your Bambu Lab printer
-   - **Access Code**: Found in printer settings under "LAN Mode"
-   - **Serial Number**: Printer's serial number
-
-### MQTT Connection
-
-The application connects to Bambu Lab printers using MQTT over port 8883 with TLS encryption. Ensure your printer has:
-
-- LAN Mode enabled
-- Access Code configured
-- Network connectivity to your computer
-
-## Architecture
-
-### Backend (Rust/Tauri)
-
-- **MQTT Service**: Handles connections to Bambu Lab printers
-- **State Management**: Accumulates and processes printer data over time
-- **Commands**: Provides printer control functionality
-- **Events**: Real-time updates to frontend via Tauri's event system
-- **Database**: SQLite database for persistent storage of settings and configurations
-
-### Frontend (React/TypeScript)
-
-- **Component-based Architecture**: Modular UI components
-- **shadcn/ui**: Modern UI component library
-- **TauriMqttService**: Frontend service for backend communication
-- **Database Storage**: All settings and configurations stored in SQLite via tauri-plugin-sql
-
-## Project Structure
-
-```
-pulseprint-desktop/
-├── src-tauri/                 # Rust backend
-│   ├── src/
-│   │   ├── main.rs           # Application entry point
-│   │   ├── mqtt.rs           # MQTT service and state management
-│   │   ├── commands.rs       # Tauri commands and database operations
-│   │   ├── database.rs       # Database schema and migrations
-│   │   └── lib.rs            # Application setup and configuration
-│   ├── Cargo.toml            # Rust dependencies
-│   └── tauri.conf.json       # Tauri configuration
-├── frontend-react/            # React frontend
-│   ├── src/
-│   │   ├── components/       # UI components
-│   │   ├── services/         # Frontend services
-│   │   ├── contexts/         # React contexts for state management
-│   │   └── App.tsx           # Main application component
-│   ├── package.json          # Node.js dependencies
-│   └── tailwind.config.js    # Tailwind CSS configuration
-└── README.md                 # This file
-```
-
-## Data Storage
-
-The application uses a **SQLite database** for all persistent storage:
-
-- **Settings**: User preferences, view modes, notification settings
-- **Printer Configurations**: Saved printer connections and settings
-- **Database Location**: Platform-specific app data directory
-  - macOS: `~/Library/Application Support/PrintPulse/`
-  - Windows: `%APPDATA%/PrintPulse/`
-  - Linux: `~/.local/share/PrintPulse/`
-
-### Database Schema
-
-- `user_preferences`: Key-value storage for application settings
-- `printers`: Printer configurations and connection details
-- Automatic migrations ensure schema updates
-
-## Troubleshooting
+## ❓ Troubleshooting
 
 ### Common Issues
 
-1. **Printer shows as "idle" after restart**:
+**Printer shows as "offline" or "connecting"**
+- Verify printer IP address is correct
+- Check that LAN Mode is enabled on printer
+- Ensure both devices are on the same network
+- Try restarting the application
 
-   - This is normal behavior - the app builds state from incremental MQTT updates
-   - Wait a few moments for the printer to send status updates
-   - The app requests initial status when connecting
+**Settings not saving**
+- Check that the application has write permissions
+- Database is stored in your OS app data folder
+- Try running as administrator/with elevated permissions
 
-2. **Connection issues**:
+**Connection timeout errors**
+- Verify the access code from printer settings
+- Check firewall settings (allow port 8883)
+- Ensure printer firmware is up to date
 
-   - Verify printer IP address and access code
-   - Ensure LAN Mode is enabled on the printer
-   - Check network connectivity between computer and printer
+### Getting Help
 
-3. **Build errors**:
+- 🐛 **Found a bug?** [Report it here](https://github.com/voodu00/pulseprint-desktop-app/issues/new?template=bug_report.yml)
+- ✨ **Have a feature idea?** [Suggest it here](https://github.com/voodu00/pulseprint-desktop-app/issues/new?template=feature_request.yml)  
+- ❓ **Need help?** [Ask in discussions](https://github.com/voodu00/pulseprint-desktop-app/discussions)
 
-   - Ensure Rust and Node.js are properly installed
-   - Try cleaning build artifacts: `cargo clean` and `npm clean-install`
+## 🤝 Contributing
 
-4. **Settings not persisting**:
-   - Check app data directory permissions
-   - Database file should be created automatically on first run
-   - Settings are stored in SQLite database, not browser storage
+We welcome contributions from the community! PulsePrint Desktop is fully open source.
 
-### Development Tips
+- 💻 **Code contributions** - See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and guidelines
+- 🐛 **Bug reports** - Help us improve by reporting issues  
+- ✨ **Feature requests** - Share your ideas for new functionality
+- 📚 **Documentation** - Help improve our guides and documentation
+- 🧪 **Testing** - Try alpha releases and provide feedback
 
-- Use the mock service toggle in settings for testing UI without a real printer
-- Check the console for detailed MQTT message logging
-- The app avoids frequent polling to prevent hardware lag on P1P printers
-- Database operations are handled through tauri-plugin-sql for type safety
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly (including database migrations)
-5. Submit a pull request
+### Quick Links
+- [Development Setup](CONTRIBUTING.md#development-setup)
+- [Coding Standards](CONTRIBUTING.md#coding-standards)  
+- [Issue Templates](https://github.com/voodu00/pulseprint-desktop-app/issues/new/choose)
+- [Discussions](https://github.com/voodu00/pulseprint-desktop-app/discussions)
 
 ## 📄 License
 
