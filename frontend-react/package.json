@@ -1,6 +1,6 @@
 {
   "name": "frontend-react",
-  "version": "0.1.0-alpha",
+  "version": "0.1.1-alpha",
   "private": true,
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.3",
