@@ -183,8 +183,10 @@ jobs:
       - name: Install Playwright
         run: |
           cd frontend-react
-          # Only install playwright CLI and browsers, not all dependencies
-          npx playwright install --with-deps
+          # Install minimal dependencies needed for Playwright
+          yarn install --frozen-lockfile
+          # Install Playwright browsers
+          yarn playwright install --with-deps
 
       - name: Serve frontend build and run E2E tests
         run: |
