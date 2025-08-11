@@ -175,7 +175,7 @@ jobs:
           cache-dependency-path: frontend-react/yarn.lock
 
       - name: Download frontend build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: frontend-build
           path: frontend-react/build/
